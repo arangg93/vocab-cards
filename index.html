@@ -288,11 +288,12 @@ function knownCount(words){let k=0;for(const w of words)if(KNOWN[w])k++;return k
 function kbar(words){const n=words.length,k=knownCount(words);return `<span class="kbar"><i style="width:${n?Math.round(k/n*100):0}%"></i></span><span>외움 ${k.toLocaleString()} / ${n.toLocaleString()}</span>`;}
 function markKnown(w){KNOWN[w]=Date.now();saveKnown();if(WRONG[w]){delete WRONG[w];saveWrong();}
   if(ST.single){toast('✅ 외운 단어에 넣었어요');return render();}
-  ST.words=ST.words.filter(x=>x!==w);ST.flip=false;
+  const wasLast=ST.i>=ST.words.length-1;ST.words=ST.words.filter(x=>x!==w);ST.flip=false;ST.lastSpoken=null;
   let msg='✅ 외웠어요! 다시 안 나와요';
   try{const b=JSON.parse(ST.back||'null');if(b&&b.id&&b.part&&b.part!=='all'&&b.id!=='wrong'&&b.id!=='known'){const S=setInfo(b.id);const P=partWords(S.words,b.part);
     if(P.length&&P.every(x=>KNOWN[x])&&!isDone(b.id,b.part)){DONE[b.id]=DONE[b.id]||{};DONE[b.id][b.part]=1;LS.set('done',DONE);msg='🏆 이 일차 단어를 다 외웠어요! 완료로 표시했어요';}}}catch(e){}
   toast(msg);
+  if(wasLast&&ST.words.length){toast(msg+' · 다 봤어요!');return goBack();}
   if(!ST.words.length){const b=JSON.parse(ST.back||'{"view":"home"}');if(b.part&&b.part!=='all'&&isDone(b.id,b.part))delete b.part;go(b.view||'home',b);return;}
   ST.i=Math.min(ST.i,ST.words.length-1);render();}
 function unKnown(w){delete KNOWN[w];saveKnown();toast('다시 공부할 단어로 돌려놨어요');render();}
@@ -842,7 +843,7 @@ VIEWS.help=()=>{const tab=ST.tab||'stu';
    <h4>⚠️ 알아 둘 점</h4><ul><li>사진은 인터넷으로 불러옵니다. 인터넷이 안 되거나 학교망에서 위키백과가 막혀 있으면 그림문자로 대신 보입니다.</li>
    <li>기기마다 기록이 따로입니다. 학생 오답을 선생님이 한꺼번에 모아 보는 기능은 없습니다.</li><li>발음 듣기는 기기에 들어 있는 음성을 씁니다. 기기에 따라 목소리가 다릅니다.</li></ul>
    <h4>사진 출처</h4><p class="small muted">기본 사진은 위키백과(Wikimedia Commons)의 자유 이용 사진이며 각 사진의 저작권은 원작자에게 있습니다. 수업 목적으로 쓰고, 다시 배포할 때는 위키미디어의 이용 조건을 따라 주세요.</p>`;
-  h+=`</div><div class="card"><b>전체 백업</b><div class="muted small" style="margin:4px 0 8px">휴대폰을 바꿀 때 오답 노트까지 옮기려면 쓰세요.</div><div class="row"><button class="btn" onclick="backupAll()">💾 전체 백업 파일</button><button class="btn" onclick="restorePick()">📂 백업 되살리기</button></div></div>`;
+  h+=`</div><div class="card"><b>전체 백업</b><div class="muted small" style="margin:4px 0 8px">휴대폰을 바꿀 때 오답 노트와 외운 단어까지 옮기려면 쓰세요.</div><div class="row"><button class="btn" onclick="backupAll()">💾 전체 백업 파일</button><button class="btn" onclick="restorePick()">📂 백업 되살리기</button></div></div>`;
   return h;};
 function backupAll(){const data={app:'vocab-photo-cards-backup',ver:1,wrong:WRONG,lists:LISTS,custom:CUSTOM,photos:PH,settings:SET,done:DONE,known:KNOWN};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download='단어카드_백업_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),1000);}
