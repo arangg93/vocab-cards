@@ -320,7 +320,8 @@ VIEWS.home=()=>{
 /* ---- 단어 묶음 화면 ---- */
 VIEWS.set=()=>{
   const S=setInfo(ST.id); const n=S.words.length; const z=SET.size||PART;
-  if(!ST.part||(ST.part==='all'?n>z:partSplit(ST.part)[0]!==z)){let p=1;const m=Math.ceil(n/z);while(p<m&&isDone(ST.id,z+':'+p))p++;ST.part=n>z?z+':'+p:'all';}
+  if(ST.part&&ST.part!=='all'&&!String(ST.part).includes(':'))ST.part=PART+':'+ST.part;
+  if(!ST.part||(ST.part==='all'?n>z:(partSplit(ST.part)[0]!==z||partSplit(ST.part)[1]>Math.ceil(n/z)))){let p=1;const m=Math.ceil(n/z);while(p<m&&isDone(ST.id,z+':'+p))p++;ST.part=n>z?z+':'+p:'all';}
   const part=ST.part;
   let h=topBar(`${S.em} ${esc(S.name)}`,"go('home')");
   if(!n) return h+`<div class="card center muted">${ST.id==='wrong'?'오답 노트가 비어 있어요. 시험에서 틀린 단어가 여기에 모여요. 🎉':'아직 단어가 없어요.'}</div>`+(S.list?`<button class="btn pri block" onclick="go('listEdit',{id:'${S.list.id}'})">단어 넣으러 가기</button>`:'');
@@ -331,8 +332,8 @@ VIEWS.set=()=>{
     <div class="partrow"><select onchange="ST.part=this.value;render()">`;
     for(let p=1;p<=m;p++){const a=(p-1)*z+1,b=Math.min(p*z,n),k=z+':'+p;h+=`<option value="${k}" ${part===k?'selected':''}>${isDone(ST.id,k)?'✅ ':''}${p}일차 (${a}~${b}번)</option>`;}
     h+=`</select>`;
-    if(part!=='all')h+=`<label class="donebox ${isDone(ST.id,part)?'on':''}"><input type="checkbox" ${isDone(ST.id,part)?'checked':''} onchange="toggleDone('${ST.id}','${part}',this.checked)">완료</label>`;
-    h+=`</div><div class="prog"><i style="width:${Math.round(dn/m*100)}%"></i></div>`;}
+    if(part!=='all'&&ST.id!=='wrong')h+=`<label class="donebox ${isDone(ST.id,part)?'on':''}"><input type="checkbox" ${isDone(ST.id,part)?'checked':''} onchange="toggleDone('${ST.id}','${part}',this.checked)">완료</label>`;
+    h+=`</div>${ST.id==='wrong'?'':`<div class="prog"><i style="width:${Math.round(dn/m*100)}%"></i></div>`}`;}
     h+=`</div>`;}
   const W=partWords(S.words,part);
   h+=`<div class="card"><div class="muted" style="margin-bottom:10px">고른 단어 <b style="color:var(--ink)">${W.length}개</b></div>
@@ -479,9 +480,9 @@ function testResult(){const T=ST.T;const n=T.words.length,r=T.right.length;const
   if(T.wrong.length){h+=`<div class="row" style="margin-bottom:8px"><button class="btn bad" onclick="retryWrong('test')">❌ 틀린 ${T.wrong.length}개만 다시 시험</button></div>
     <button class="btn pri block" style="margin-bottom:12px" onclick="retryWrong('study')">🃏 틀린 단어 카드로 공부하기</button>
     <h2>틀린 단어</h2><div class="wl">${T.wrong.map(w=>wordRow(entry(w))).join('')}</div>`;}
-  if(!T.review&&T.part&&T.part!=='all'){const on=isDone(T.setId,T.part);
+  if(!T.review&&T.part&&T.part!=='all'){if(!String(T.part).includes(':'))T.part=PART+':'+T.part;const on=isDone(T.setId,T.part);
     h+=`<button class="btn ${on?'ghost':'ok'} block" style="margin-top:12px" onclick="toggleDone('${T.setId}','${T.part}',${!on})">${on?'✅ 이 일차는 완료로 표시됨 (누르면 풀기)':'✅ 이 일차를 완료로 표시하기'}</button>
-    <button class="btn ghost block" style="margin-top:8px" onclick="go('set',{id:'${T.setId}'})">다음 일차로 가기</button>`;}
+    <button class="btn ghost block" style="margin-top:8px" onclick="go('set',{id:'${T.setId}'})">일차 목록으로 가기</button>`;}
   h+=`<button class="btn ghost block" style="margin-top:12px" onclick="go('home')">처음으로</button>`;
   return h;}
 function retryWrong(kind){const T=ST.T;const W=T.wrong.slice();
@@ -600,7 +601,7 @@ function parseWordList(text){const out=[];
     ln=ln.replace(/^\s*(?:[\(\[]?\d+[.)\]]|[①-⑳]|[-•*·▶○●□■]+)\s*/,'').trim();if(!ln)continue;
     if(/[가-힣]/.test(ln)){
       const m=ln.match(/^([A-Za-z][A-Za-z '\-.]*?)\s*(?:\t|,|=|:|\s-\s|\s(?=[가-힣(~]))\s*(.*[가-힣].*)$/);
-      if(m)out.push({w:m[1].trim().replace(/[.\-]+$/,''),ko:m[2].trim()});
+      if(m)out.push({w:(w=>/\..*\.$/.test(w)?w:w.replace(/[.\-]+$/,''))(m[1].trim()),ko:m[2].trim()});
       else{const m2=ln.match(/^([A-Za-z][A-Za-z '\-.]*[A-Za-z'])\s*[-.|–—→\/>:=,~\s]*\s*([가-힣(].*)$/);
         out.push(m2?{w:m2[1].trim(),ko:m2[2].trim()}:{w:ln,ko:''});}}
     else ln.split(/[,\t;\/]+/).forEach(x=>{x=x.trim().replace(/^["'“”‘’]+|["'“”‘’.!?]+$/g,'');if(x)out.push({w:x,ko:''});});}
@@ -763,7 +764,7 @@ function backupAll(){const data={app:'vocab-photo-cards-backup',ver:1,wrong:WRON
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download='단어카드_백업_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),1000);}
 function restorePick(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{const f=i.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());if(d.app!=='vocab-photo-cards-backup')throw 0;if(!confirm('지금 기록을 백업 파일 내용으로 바꿀까요?'))return;
-    WRONG=d.wrong||{};LISTS=d.lists||[];CUSTOM=d.custom||{};SET=d.settings||SET;DONE=d.done||DONE;LS.set('done',DONE);saveWrong();saveLists();saveCustom();saveSet();
+    WRONG=d.wrong||{};LISTS=d.lists||[];CUSTOM=d.custom||{};SET=d.settings||SET;DONE=d.done||{};LS.set('done',DONE);saveWrong();saveLists();saveCustom();saveSet();
     for(const [w,v] of Object.entries(d.photos||{}))await setPhoto(w,v);toast('되살렸어요');go('home');}catch(e){alert('이 앱의 백업 파일이 아니에요.');}};i.click();}
 
 /* ===== 시작 ===== */
