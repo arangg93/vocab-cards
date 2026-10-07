@@ -569,8 +569,8 @@ VIEWS.lists=()=>{
      <div class="row" style="margin-top:10px"><button class="btn pri" onclick="go('set',{id:'list:${L.id}'})">공부, 시험</button><button class="btn" onclick="go('listEdit',{id:'${L.id}'})">✏️ 고치기</button></div></div>`).join('')+`</div>`;
   else h+=`<div class="card muted center">아직 단어장이 없어요. 아래 <b>새 단어장에 목록 추가하기</b>에서 만들어 보세요.</div>`;
   h+=`<button class="setbtn" style="width:100%;margin-bottom:12px" onclick="go('browse')"><span class="em">🔤</span><div><b>전체 단어 A~Z에서 체크해서 담기</b><span>기본 3,000단어를 알파벳 순으로 보며 골라요</span></div></button>
-   <h2>📤 나눠 주기, 받기</h2><div class="card"><div class="muted small" style="margin-bottom:10px">선생님이 만든 단어장을 파일로 저장해서 학생에게 보내면, 학생은 <b>단어장 파일 열기</b>로 그대로 받을 수 있어요. 바꾼 사진도 함께 들어가요.</div>
-     <div class="row"><button class="btn" onclick="exportLists()">💾 단어장 파일로 저장</button><button class="btn" onclick="$('#jsonPick').click()">📂 단어장 파일 열기</button></div></div>`;
+   <h2>📤 단어장 내려받기, 올리기</h2><div class="card"><div class="small" style="margin-bottom:10px;line-height:1.6">💾 <b>내려받기</b>를 누르면 내 단어장이 파일 하나로 저장돼요.<br>📤 그 파일을 <b>다른 휴대폰이나 컴퓨터</b>에서 <b>올리기</b>로 올리면 단어장을 그대로 쓸 수 있어요.<br><span class="muted">선생님이 만든 단어장을 학생에게 나눠 줄 때도 이렇게 해요. 바꾼 사진도 함께 들어가요.</span></div>
+     <div class="row"><button class="btn" onclick="exportLists()">💾 단어장 내려받기</button><button class="btn" onclick="$('#jsonPick').click()">📤 단어장 올리기</button></div></div>`;
   h+=`<h2>➕ 새 단어장에 목록 추가하기</h2><div class="card"><div class="muted small" style="margin-bottom:8px">내가 고른 단어로 나만의 단어장을 만들어요. 기본 단어에 없는 단어도 넣을 수 있어요.</div>
    <div style="display:flex;gap:8px"><input type="text" id="nl" placeholder="새 단어장 이름 (예: 1단원)" onkeydown="if(event.key==='Enter')newList()"><button class="btn pri" onclick="newList()">만들기</button></div></div>
    <div class="card"><b>📋 단어 목록 붙여넣어 바로 만들기</b><div class="muted small" style="margin:4px 0 8px">교과서나 학습지의 단어 목록을 붙여 넣으면 단어장이 바로 생겨요.</div>
@@ -808,6 +808,7 @@ VIEWS.help=()=>{const tab=ST.tab||'stu';
    </ul>
 
    <h4>⭐ 나만의 단어장</h4>
+   <p>단어장을 다른 휴대폰이나 컴퓨터에서도 쓰고 싶으면 <b>⭐ 내 단어장</b>에서 <b>💾 단어장 내려받기</b>를 누르고, 그 파일을 다른 기기에서 <b>📤 단어장 올리기</b>로 올려요.</p>
    <p>헷갈리는 단어는 카드의 <b>⭐ 담기</b>를 눌러 모아요. 담는 창에서 새 단어장도 만들 수 있어요.<br>많이 담고 싶으면 처음 화면의 <b>🔤 전체 단어 A~Z 보기</b>에서 단어를 눌러 ✔ 체크해요.</p>
 
    <h4>⏸ 중간에 그만둬도 괜찮아요</h4>
@@ -837,7 +838,7 @@ VIEWS.help=()=>{const tab=ST.tab||'stu';
    ${S('+','<b>🔤 전체 단어 A~Z</b>: 알파벳별로 기본 3,000단어를 보며 눌러서 체크하고, 한꺼번에 기존 단어장이나 새 단어장에 담습니다. 다른 글자로 넘어가도 체크가 남습니다.')}
    ${S('+','<b>📋 붙여넣어 바로 만들기</b>(⭐ 내 단어장 화면): 이름을 쓰고 단어 목록을 붙여 넣으면 단어장이 바로 생깁니다. 양식은 입력 칸 위 안내를 보세요. 한 줄에 단어 하나, 또는 「단어, 뜻」. 뜻 없는 단어는 한 줄에 쉼표로 여러 개 써도 됩니다. 엑셀이나 한글 표의 「영어 | 뜻」 두 칸을 복사해 붙여도 됩니다. <b>👀 미리 보기</b>로 어떻게 읽혔는지 먼저 확인할 수 있습니다.')}
    ${S('+','<b>➕ 추가 단어집</b>: 기본 3,000단어에 없는 단어는 카드가 자동으로 만들어지고 처음 화면의 추가 단어집에 모입니다. 발음 듣기는 되고 사진은 인터넷에서 찾아 붙지만, 뜻은 붙여 넣을 때 함께 써야 하며 예문은 붙지 않습니다. 뜻을 빠뜨렸으면 추가 단어집에서 ✏️로 넣습니다.')}
-   ${S(5,'필요하면 사진을 바꾼 뒤 <b>💾 단어장 파일로 저장</b>. 그 파일을 학급 채팅방 등으로 보내면 학생은 <b>📂 단어장 파일 열기</b>로 받습니다(바꾼 사진 포함).')}
+   ${S(5,'필요하면 사진을 바꾼 뒤 <b>💾 단어장 내려받기</b>. 그 파일을 학급 채팅방 등으로 보내면 학생은 <b>📤 단어장 올리기</b>로 받습니다(바꾼 사진 포함). 같은 방법으로 학생이 자기 단어장을 다른 기기로 옮길 수도 있습니다.')}
    <h4>✅ 외운 단어와 진도</h4><p>학생이 카드에서 <b>✅ 외웠어요</b>를 누르면 그 단어는 카드 공부에서 빠지고 <b>외운 단어</b>에 쌓입니다. 시험에서 틀리면 외운 단어에서 다시 빠지므로, 외웠다고 누르기만 하고 넘어가는 것을 시험이 걸러 줍니다. 한 일차의 단어를 모두 외우면 그 일차는 자동으로 완료됩니다. 처음 화면과 내 단어장 목록에 「외움 n / 전체」 막대가 보입니다.</p>
    <h4>🔒 개인정보</h4><p>이 앱은 로그인이 없고, 학생 기록을 어디에도 보내지 않습니다. 모든 기록은 각자의 기기 안에만 남습니다. 인터넷은 사진을 불러오고 찾을 때만 씁니다.</p>
    <h4>⚠️ 알아 둘 점</h4><ul><li>사진은 인터넷으로 불러옵니다. 인터넷이 안 되거나 학교망에서 위키백과가 막혀 있으면 그림문자로 대신 보입니다.</li>
