@@ -144,6 +144,12 @@ nav.bot button.on{color:var(--pri);font-weight:800}
 .donebox input{width:20px;height:20px;margin:0;accent-color:var(--ok)}
 .donebox.on{border-color:var(--ok);color:var(--ok)}
 .prog{height:6px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}.prog i{display:block;height:100%;background:var(--ok)}
+.kbar{display:block;height:5px;border-radius:3px;background:var(--line);margin:6px 0 3px;overflow:hidden;max-width:220px}
+.kbar i{display:block;height:100%;background:var(--ok)}
+.navrow .btn.ok{flex:1.2}
+.easy{font-size:16px;line-height:1.75}
+.easy h4{margin-top:18px}
+.easy li{margin:3px 0}
 .toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1d2433;color:#fff;
   padding:10px 16px;border-radius:12px;z-index:60;font-size:14.5px;max-width:90vw;text-align:center}
 .help h4{margin:14px 0 6px;font-size:16px}
@@ -264,6 +270,7 @@ function setInfo(id){
   if(id.startsWith('cat:')){const c=id.slice(4);return {name:CATS[c][0],em:CATS[c][1],words:DB.filter(e=>e.cat===c).sort((a,b)=>a.lv-b.lv||a.i-b.i).map(e=>e.w)};}
   if(id.startsWith('list:')){const L=LISTS.find(x=>x.id===id.slice(5));return L?{name:L.name,em:'⭐',words:L.words.slice(),list:L}:{name:'(지워진 단어장)',em:'⭐',words:[]};}
   if(id==='custom') return {name:'추가 단어집',em:'➕',words:Object.keys(CUSTOM).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()))};
+  if(id==='known') return {name:'외운 단어',em:'✅',words:Object.keys(KNOWN).sort((a,b)=>KNOWN[b]-KNOWN[a])};
   if(id==='wrong') return {name:'오답 노트',em:'📕',words:Object.keys(WRONG).sort((a,b)=>WRONG[b].n-WRONG[a].n)};
   return {name:'?',em:'',words:[]};
 }
@@ -274,6 +281,21 @@ function partWords(words,part){ if(!part||part==='all')return words; const [z,p]
 function partLabel(part){if(!part||part==='all')return '';const [z,p]=partSplit(part);return ` ${p}일차`;}
 /* 진도: 묶음마다 끝낸 일차를 기억한다 */
 let DONE=LS.get('done',{});
+/* 외운 단어: 카드에서 「외웠어요」를 누르면 쌓이고, 카드 공부에서는 건너뛴다. 시험에서 틀리면 빠진다 */
+let KNOWN=LS.get('known',{});
+const saveKnown=()=>LS.set('known',KNOWN);
+function knownCount(words){let k=0;for(const w of words)if(KNOWN[w])k++;return k;}
+function kbar(words){const n=words.length,k=knownCount(words);return `<span class="kbar"><i style="width:${n?Math.round(k/n*100):0}%"></i></span><span>외움 ${k.toLocaleString()} / ${n.toLocaleString()}</span>`;}
+function markKnown(w){KNOWN[w]=Date.now();saveKnown();if(WRONG[w]){delete WRONG[w];saveWrong();}
+  if(ST.single){toast('✅ 외운 단어에 넣었어요');return render();}
+  ST.words=ST.words.filter(x=>x!==w);ST.flip=false;
+  let msg='✅ 외웠어요! 다시 안 나와요';
+  try{const b=JSON.parse(ST.back||'null');if(b&&b.id&&b.part&&b.part!=='all'&&b.id!=='wrong'&&b.id!=='known'){const S=setInfo(b.id);const P=partWords(S.words,b.part);
+    if(P.length&&P.every(x=>KNOWN[x])&&!isDone(b.id,b.part)){DONE[b.id]=DONE[b.id]||{};DONE[b.id][b.part]=1;LS.set('done',DONE);msg='🏆 이 일차 단어를 다 외웠어요! 완료로 표시했어요';}}}catch(e){}
+  toast(msg);
+  if(!ST.words.length){const b=JSON.parse(ST.back||'{"view":"home"}');if(b.part&&b.part!=='all'&&isDone(b.id,b.part))delete b.part;go(b.view||'home',b);return;}
+  ST.i=Math.min(ST.i,ST.words.length-1);render();}
+function unKnown(w){delete KNOWN[w];saveKnown();toast('다시 공부할 단어로 돌려놨어요');render();}
 function isDone(id,part){return !!(DONE[id]&&DONE[id][part]);}
 function toggleDone(id,part,on){DONE[id]=DONE[id]||{};if(on)DONE[id][part]=1;else delete DONE[id][part];LS.set('done',DONE);render();if(on)toast('✅ 완료로 표시했어요');}
 const SIZES=[10,20,30,50];
@@ -305,51 +327,57 @@ VIEWS.home=()=>{
   h+=`<button class="setbtn" style="width:100%;margin-bottom:8px" onclick="go('browse')"><span class="em">🔤</span><div><b>전체 단어 A~Z 보기</b><span>체크해서 내 단어장에 한꺼번에 담기</span></div></button>`;
   const cn=Object.keys(CUSTOM).length;
   if(cn) h+=`<button class="setbtn" style="width:100%;margin-bottom:8px;background:var(--warnbg)" onclick="go('set',{id:'custom'})"><span class="em">➕</span><div><b>추가 단어집 (${cn}개)</b><span>기본 3,000단어에 없어서 따로 넣은 단어${Object.values(CUSTOM).some(c=>!c.ko)?'. 뜻을 넣어야 할 단어가 있어요':''}</span></div></button>`;
+  const kc=Object.keys(KNOWN).length;
+  if(kc) h+=`<button class="setbtn" style="width:100%;margin-bottom:8px;background:var(--okbg)" onclick="go('set',{id:'known'})"><span class="em">✅</span><div><b>외운 단어 (${kc.toLocaleString()}개)</b><span>카드에서 외웠다고 누른 단어. 카드 공부에서는 건너뛰어요</span></div></button>`;
   if(wn) h+=`<button class="setbtn" style="width:100%;margin-bottom:6px;background:var(--badbg)" onclick="go('set',{id:'wrong'})"><span class="em">📕</span><div><b>오답 노트 (${wn}개)</b><span>틀린 단어만 다시 공부하고 시험 보기</span></div></button>`;
   h+=`<h2>📗 교육부 필수 단어 (단계별)</h2><div class="big" style="display:flex;flex-direction:column;gap:8px">`;
-  [1,2,3].forEach(l=>{const n=DB.filter(e=>e.lv===l).length;h+=`<button class="setbtn" onclick="go('set',{id:'lv:${l}'})"><span class="em">${LV[l].em}</span><div><b>${LV[l].name} ${n.toLocaleString()}단어</b><span>${LV[l].desc}</span></div></button>`;});
-  h+=`<button class="setbtn" onclick="go('set',{id:'all'})"><span class="em">📚</span><div><b>전체 ${DB.length.toLocaleString()}단어</b><span>2022 개정 교육과정 기본 어휘 전부</span></div></button></div>`;
+  [1,2,3].forEach(l=>{const n=DB.filter(e=>e.lv===l).length;h+=`<button class="setbtn" onclick="go('set',{id:'lv:${l}'})"><span class="em">${LV[l].em}</span><div><b>${LV[l].name} ${n.toLocaleString()}단어</b><span>${LV[l].desc}</span>${kbar(DB.filter(e=>e.lv===l).map(e=>e.w))}</div></button>`;});
+  h+=`<button class="setbtn" onclick="go('set',{id:'all'})"><span class="em">📚</span><div><b>전체 ${DB.length.toLocaleString()}단어</b><span>2022 개정 교육과정 기본 어휘 전부</span>${kbar(DB.map(e=>e.w))}</div></button></div>`;
   h+=`<h2>🗂 영역별 단어 묶음</h2><div class="grid2">`;
   Object.entries(CATS).forEach(([k,[n,em]])=>{const c=DB.filter(e=>e.cat===k).length;if(c)h+=`<button class="setbtn" onclick="go('set',{id:'cat:${k}'})"><span class="em">${em}</span><div><b>${n}</b><span>${c}단어</span></div></button>`;});
   h+=`</div>`;
   if(LISTS.length){h+=`<h2>⭐ 내 단어장</h2><div style="display:flex;flex-direction:column;gap:8px">`;
-    LISTS.forEach(L=>h+=`<button class="setbtn" onclick="go('set',{id:'list:${L.id}'})"><span class="em">⭐</span><div><b>${esc(L.name)}</b><span>${L.words.length}단어</span></div></button>`);h+=`</div>`;}
+    LISTS.forEach(L=>h+=`<button class="setbtn" onclick="go('set',{id:'list:${L.id}'})"><span class="em">⭐</span><div style="flex:1"><b>${esc(L.name)}</b>${kbar(L.words)}</div></button>`);h+=`</div>`;}
   return h;
 };
 
 /* ---- 단어 묶음 화면 ---- */
 VIEWS.set=()=>{
   const S=setInfo(ST.id); const n=S.words.length; const z=SET.size||PART;
+  const partOk=k=>isDone(ST.id,k)||(ST.id!=='wrong'&&ST.id!=='known'&&partWords(S.words,k).every(w=>KNOWN[w]));
   if(ST.part&&ST.part!=='all'&&!String(ST.part).includes(':'))ST.part=PART+':'+ST.part;
-  if(!ST.part||(ST.part==='all'?n>z:(partSplit(ST.part)[0]!==z||partSplit(ST.part)[1]>Math.ceil(n/z)))){let p=1;const m=Math.ceil(n/z);while(p<m&&isDone(ST.id,z+':'+p))p++;ST.part=n>z?z+':'+p:'all';}
+  if(!ST.part||(ST.part==='all'?n>z:(partSplit(ST.part)[0]!==z||partSplit(ST.part)[1]>Math.ceil(n/z)))){let p=1;const m=Math.ceil(n/z);while(p<m&&partOk(z+':'+p))p++;ST.part=n>z?z+':'+p:'all';}
   const part=ST.part;
   let h=topBar(`${S.em} ${esc(S.name)}`,"go('home')");
   if(!n) return h+`<div class="card center muted">${ST.id==='wrong'?'오답 노트가 비어 있어요. 시험에서 틀린 단어가 여기에 모여요. 🎉':'아직 단어가 없어요.'}</div>`+(S.list?`<button class="btn pri block" onclick="go('listEdit',{id:'${S.list.id}'})">단어 넣으러 가기</button>`:'');
-  if(n>SIZES[0]){const m=Math.ceil(n/z);const dn=Array.from({length:m},(_,k)=>isDone(ST.id,z+':'+(k+1))).filter(Boolean).length;
+  if(n>SIZES[0]){const m=Math.ceil(n/z);const dn=Array.from({length:m},(_,k)=>partOk(z+':'+(k+1))).filter(Boolean).length;
     h+=`<div class="card"><div style="font-weight:800;margin-bottom:6px">① 한 번에 공부할 양을 고르세요</div>
     <div class="sizes">${SIZES.map(x=>`<button class="${x===z?'on':''}" onclick="setSize(${x})">${x}개</button>`).join('')}</div>`;
     if(n>z){h+=`<div style="font-weight:800;margin:12px 0 6px">② 오늘 할 일차 <span class="muted small" style="font-weight:400">(완료 ${dn} / ${m}일차)</span></div>
     <div class="partrow"><select onchange="ST.part=this.value;render()">`;
-    for(let p=1;p<=m;p++){const a=(p-1)*z+1,b=Math.min(p*z,n),k=z+':'+p;h+=`<option value="${k}" ${part===k?'selected':''}>${isDone(ST.id,k)?'✅ ':''}${p}일차 (${a}~${b}번)</option>`;}
+    for(let p=1;p<=m;p++){const a=(p-1)*z+1,b=Math.min(p*z,n),k=z+':'+p;h+=`<option value="${k}" ${part===k?'selected':''}>${partOk(k)?'✅ ':''}${p}일차 (${a}~${b}번)</option>`;}
     h+=`</select>`;
     if(part!=='all'&&ST.id!=='wrong')h+=`<label class="donebox ${isDone(ST.id,part)?'on':''}"><input type="checkbox" ${isDone(ST.id,part)?'checked':''} onchange="toggleDone('${ST.id}','${part}',this.checked)">완료</label>`;
     h+=`</div>${ST.id==='wrong'?'':`<div class="prog"><i style="width:${Math.round(dn/m*100)}%"></i></div>`}`;}
     h+=`</div>`;}
   const W=partWords(S.words,part);
-  h+=`<div class="card"><div class="muted" style="margin-bottom:10px">고른 단어 <b style="color:var(--ink)">${W.length}개</b></div>
-    <button class="btn pri block" style="margin-bottom:8px;font-size:17px" onclick="startStudy()">🃏 카드로 공부하기</button>
+  const kn=ST.id==='known'?0:knownCount(W), left=W.length-kn;
+  h+=`<div class="card"><div class="muted" style="margin-bottom:10px">고른 단어 <b style="color:var(--ink)">${W.length}개</b>${ST.id==='known'?'':` · 외움 <b style="color:var(--ok)">${kn}개</b> · 남은 단어 <b style="color:var(--ink)">${left}개</b>`}</div>
+    ${ST.id==='known'||left?`<button class="btn pri block" style="margin-bottom:8px;font-size:17px" onclick="startStudy()">🃏 카드로 공부하기${ST.id==='known'?'':` (남은 ${left}개)`}</button>`:`<div class="card center" style="background:var(--okbg);margin:0 0 8px"><b>🏆 여기 단어는 다 외웠어요!</b><div class="muted small">시험으로 확인해 보세요</div></div>`}
+    ${kn?`<button class="btn ghost block" style="margin-bottom:8px" onclick="startStudy(true)">🔁 외운 단어까지 모두 다시 보기</button>`:''}
     <div class="row"><button class="btn ok" onclick="go('testSetup',{id:ST.id,part:ST.part||'all'})" style="font-size:17px">📝 시험 보기</button></div></div>`;
   if(ST.id==='wrong') h+=`<button class="btn bad block" style="margin-bottom:12px" onclick="if(confirm('오답 노트를 모두 비울까요?')){WRONG={};saveWrong();go('home')}">오답 노트 모두 비우기</button>`;
   if(S.list) h+=`<button class="btn ghost block" style="margin-bottom:12px" onclick="go('listEdit',{id:'${S.list.id}'})">✏️ 이 단어장 고치기 (단어 넣기, 빼기)</button>`;
   if(ST.id==='custom'){const nk=W.filter(w=>!CUSTOM[w].ko).length;
     h+=`<div class="card small muted">기본 3,000단어에 없어서 단어장에 넣을 때 따로 모인 단어예요. <b>✏️</b>로 뜻을 넣거나 고치고, <b>🗑</b>로 지울 수 있어요.${nk?`<div style="color:var(--bad);margin-top:4px">뜻이 비어 있는 단어 ${nk}개</div>`:''}</div>`;
     return h+`<h2>단어 목록</h2><div class="wl">`+W.map(w=>wordRow(entry(w),`<button class="act" onclick="event.stopPropagation();editCustom(${jsq(w)})" title="뜻 고치기">✏️</button><button class="act del" style="margin-left:4px" onclick="event.stopPropagation();delCustom(${jsq(w)})" title="지우기">🗑</button>`)).join('')+`</div>`;}
+  if(ST.id==='known') return h+`<div class="card small muted">카드에서 <b>✅ 외웠어요</b>를 누른 단어가 모여요. 이 단어들은 카드 공부에서 건너뛰어요. 시험에서 틀리면 다시 공부할 단어로 돌아가요. <b>↩</b>를 누르면 바로 돌려놓아요.</div><h2>단어 목록</h2><div class="wl">`+W.map(w=>wordRow(entry(w),`<button class="act" onclick="event.stopPropagation();unKnown(${jsq(w)})" title="다시 외우기">↩</button>`)).join('')+`</div>`;
   h+=`<h2>단어 목록</h2><div class="wl">`+W.map(w=>wordRow(entry(w),ST.id==='wrong'?`<button class="act del" onclick="event.stopPropagation();delete WRONG[${jsq(w)}];saveWrong();render()" title="오답에서 빼기">✓</button>`:'')).join('')+`</div>`;
   return h;
 };
 function wordRow(e,act){
   const wr=WRONG[e.w];
-  return `<div class="wi" onclick="openWord(${jsq(e.w)})"><div class="th">${photoHTML(e,true)}</div><div class="tx"><b>${esc(e.w)}</b> ${e.lv?`<span class="pill l${e.lv}">${LV[e.lv].name}</span>`:'<span class="pill">내 단어</span>'}${wr?` <span class="pill" style="background:var(--badbg);color:var(--bad)">✗${wr.n}</span>`:''}<div>${esc(e.ko)}</div></div>${act||''}</div>`;}
+  return `<div class="wi" onclick="openWord(${jsq(e.w)})"><div class="th">${photoHTML(e,true)}</div><div class="tx"><b>${esc(e.w)}</b> ${e.lv?`<span class="pill l${e.lv}">${LV[e.lv].name}</span>`:'<span class="pill">내 단어</span>'}${wr?` <span class="pill" style="background:var(--badbg);color:var(--bad)">✗${wr.n}</span>`:''}${KNOWN[e.w]?' <span class="pill" style="background:var(--okbg);color:var(--ok)">✅ 외움</span>':''}<div>${esc(e.ko)}</div></div>${act||''}</div>`;}
 function openWord(w){go('study',{words:[w],i:0,back:JSON.stringify({view:ST.view,id:ST.id,q:ST.q,part:ST.part}),single:true});}
 
 /* ---- 찾기 ---- */
@@ -365,8 +393,11 @@ VIEWS.search=()=>{
 };
 
 /* ---- 카드 공부 ---- */
-function startStudy(){const S=setInfo(ST.id);let W=partWords(S.words,ST.part||'all');if(SET.shuffle)W=shuffle(W);
-  go('study',{words:W,i:0,back:JSON.stringify({view:'set',id:ST.id,part:ST.part})});}
+function startStudy(all){const S=setInfo(ST.id);let W=partWords(S.words,ST.part||'all');
+  if(!all&&ST.id!=='known')W=W.filter(w=>!KNOWN[w]);
+  if(!W.length)return toast('여기 단어는 다 외웠어요! 시험으로 확인해 보세요 💪');
+  if(SET.shuffle)W=shuffle(W);
+  go('study',{words:W,i:0,id:ST.id,all:!!all,back:JSON.stringify({view:'set',id:ST.id,part:ST.part})});}
 VIEWS.study=()=>{
   const W=ST.words, i=Math.min(ST.i,W.length-1), e=entry(W[i]); const show=SET.showMean||ST.flip;
   let h=topBar(ST.single?'단어 카드':`🃏 ${i+1} / ${W.length}`,'goBack()');
@@ -379,8 +410,8 @@ VIEWS.study=()=>{
    ${show&&e.der?`<div class="muted small" style="margin-top:6px">함께 알아 두기: ${esc(e.der)}</div>`:''}
    ${e.ex?`<div class="ex" onclick="event.stopPropagation()">📖 ${exHTML(e)} <button onclick="speakEx(${jsq(e.w)})">🔊 예문</button>${show&&e.exk?`<div class="exk">${esc(e.exk)}</div>`:'<div class="exk">(뜻을 보면 해석도 나와요)</div>'}</div>`:''}</div></div>
    <div class="tools"><button class="btn" onclick="speak(${jsq(e.w)})">🔊 듣기</button><button class="btn" onclick="repeatWord(${jsq(e.w)})">🔁 ${SET.rep||3}번 듣기</button><button class="btn" onclick="photoSheet(${jsq(e.w)})">🖼 사진 바꾸기</button><button class="btn" onclick="pickList(${jsq(e.w)})">⭐ 담기</button>
-   ${WRONG[e.w]?`<button class="btn bad" onclick="delete WRONG[${jsq(e.w)}];saveWrong();toast('오답 노트에서 뺐어요');render()">✓ 외웠어요</button>`:''}</div>`;
-  if(!ST.single){h+=`<div class="navrow"><button class="btn ghost" ${i===0?'disabled':''} onclick="ST.i--;ST.flip=false;render()">◀ 이전</button><button class="btn pri" onclick="nextCard()">${i===W.length-1?'끝 🎉':'다음 ▶'}</button></div>
+   ${ST.single?(KNOWN[e.w]?`<button class="btn" onclick="unKnown(${jsq(e.w)})">↩ 다시 외우기</button>`:`<button class="btn ok" onclick="markKnown(${jsq(e.w)})">✅ 외웠어요</button>`):''}</div>`;
+  if(!ST.single){h+=`<div class="navrow"><button class="btn ghost" ${i===0?'disabled':''} onclick="ST.i--;ST.flip=false;render()">◀ 이전</button>${ST.id==='known'||ST.all?'':`<button class="btn ok" onclick="markKnown(${jsq(e.w)})">✅ 외웠어요</button>`}<button class="btn pri" onclick="nextCard()">${i===W.length-1?'끝 🎉':'다음 ▶'}</button></div>
    ${ST.auto?`<button class="btn bad block" style="margin-top:10px;font-size:17px" onclick="stopVoice();render()">⏹ 자동 듣기 멈추기</button>`
      :`<button class="btn ok block" style="margin-top:10px;font-size:17px" onclick="autoListen()">🎧 자동 반복 듣기 (카드가 저절로 넘어가요)</button>`}
    <div class="card" style="margin-top:12px"><b>🔁 반복 듣기 설정</b>
@@ -471,7 +502,7 @@ function checkWrite(){const v=$('#ans').value;if(!v.trim())return toast('답을 
   const ok=[e.w,...e.alt].some(x=>norm(x)===norm(v));ST.typed=v;answer(ok,ok?e.w:v);}
 function answer(ok,ans){const T=ST.T;const w=T.words[T.i];ST.ans=ans;ST.okWrite=ok;
   if(ok){T.right.push(w);if(T.review){delete WRONG[w];saveWrong();}}
-  else{T.wrong.push(w);WRONG[w]={n:((WRONG[w]||{}).n||0)+1,t:Date.now()};saveWrong();}
+  else{T.wrong.push(w);if(KNOWN[w]){delete KNOWN[w];saveKnown();}WRONG[w]={n:((WRONG[w]||{}).n||0)+1,t:Date.now()};saveWrong();}
   LS.set('test',Object.assign({},T,{i:T.i+1}));render();}
 function nextQ(){ST.T.i++;ST.ans=null;ST.typed='';ST.hint=false;ST.okWrite=false;if(ST.T.i>=ST.T.words.length)LS.set('test',null);render();}
 function testResult(){const T=ST.T;const n=T.words.length,r=T.right.length;const pct=n?Math.round(r/n*100):0;
@@ -530,16 +561,19 @@ function addSelTo(id){let L;
 
 /* ---- 내 단어장 ---- */
 VIEWS.lists=()=>{
-  let h=topBar('⭐ 내 단어장')+`<div class="card"><div class="muted small" style="margin-bottom:8px">내가 고른 단어로 나만의 단어장을 만들어요. 기본 단어에 없는 단어도 넣을 수 있어요.</div>
+  let h0='';
+  if(!LISTS.length) h0+=`<div class="card muted center">아직 단어장이 없어요. 위에서 이름을 쓰고 만들어 보세요.</div>`;
+  if(LISTS.length) h0+=`<h2>📒 내 단어장 ${LISTS.length}개</h2><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">`+LISTS.map(L=>`<div class="card" style="margin:0"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">⭐ ${esc(L.name)}</b><span class="muted">${L.words.length}단어</span></div>
+     <div class="small muted" style="margin-top:6px">${kbar(L.words)}${(()=>{const d=Object.keys(DONE['list:'+L.id]||{}).length;return d?` · 완료 ${d}일차`:'';})()}</div>
+     <div class="row" style="margin-top:10px"><button class="btn pri" onclick="go('set',{id:'list:${L.id}'})">공부, 시험</button><button class="btn" onclick="go('listEdit',{id:'${L.id}'})">✏️ 고치기</button></div></div>`).join('')+`</div>`;
+  let h=topBar('⭐ 내 단어장')+(LISTS.length?h0+'<h2>➕ 새 단어장 만들기</h2>':'')+`<div class="card"><div class="muted small" style="margin-bottom:8px">내가 고른 단어로 나만의 단어장을 만들어요. 기본 단어에 없는 단어도 넣을 수 있어요.</div>
    <div style="display:flex;gap:8px"><input type="text" id="nl" placeholder="새 단어장 이름 (예: 1단원)" onkeydown="if(event.key==='Enter')newList()"><button class="btn pri" onclick="newList()">만들기</button></div></div>`;
   h+=`<div class="card"><b>📋 단어 목록 붙여넣어 바로 만들기</b><div class="muted small" style="margin:4px 0 8px">교과서나 학습지의 단어 목록을 붙여 넣으면 단어장이 바로 생겨요.</div>
    <input type="text" id="pasteName" placeholder="단어장 이름 (예: 2과 단어)">${pasteGuide('pasteTxt')}
    <textarea id="pasteTxt" style="margin-top:8px" placeholder="여기에 붙여 넣으세요"></textarea>
    <div class="row" style="margin-top:8px"><button class="btn ghost" onclick="previewPaste('pasteTxt','pastePrev')">👀 미리 보기</button><button class="btn pri" onclick="createFromPaste()">📋 단어장 만들기</button></div><div id="pastePrev"></div></div>
    <button class="setbtn" style="width:100%;margin-bottom:12px" onclick="go('browse')"><span class="em">🔤</span><div><b>전체 단어 A~Z에서 체크해서 담기</b><span>기본 3,000단어를 알파벳 순으로 보며 골라요</span></div></button>`;
-  if(!LISTS.length) h+=`<div class="card muted center">아직 단어장이 없어요. 위에서 이름을 쓰고 만들어 보세요.</div>`;
-  h+=`<div style="display:flex;flex-direction:column;gap:8px">`+LISTS.map(L=>`<div class="card" style="margin:0"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">⭐ ${esc(L.name)}</b><span class="muted">${L.words.length}단어</span></div>
-     <div class="row" style="margin-top:10px"><button class="btn pri" onclick="go('set',{id:'list:${L.id}'})">공부, 시험</button><button class="btn" onclick="go('listEdit',{id:'${L.id}'})">✏️ 고치기</button></div></div>`).join('')+`</div>`;
+  if(!LISTS.length) h+=h0;
   h+=`<h2>📤 나눠 주기, 받기</h2><div class="card"><div class="muted small" style="margin-bottom:10px">선생님이 만든 단어장을 파일로 저장해서 학생에게 보내면, 학생은 <b>단어장 파일 열기</b>로 그대로 받을 수 있어요. 바꾼 사진도 함께 들어가요.</div>
      <div class="row"><button class="btn" onclick="exportLists()">💾 단어장 파일로 저장</button><button class="btn" onclick="$('#jsonPick').click()">📂 단어장 파일 열기</button></div></div>`;
   return h;
@@ -722,22 +756,71 @@ async function searchPhotos(){const q=$('#phq').value.trim();if(!q)return;const 
 VIEWS.help=()=>{const tab=ST.tab||'stu';
   let h=topBar('❓ 사용법')+`<div class="tabs"><button class="${tab==='stu'?'on':''}" onclick="ST.tab='stu';render()">🙋 학생용</button><button class="${tab==='tea'?'on':''}" onclick="ST.tab='tea';render()">👩‍🏫 선생님용</button></div><div class="card help">`;
   const S=(n,t)=>`<div class="step"><span class="no">${n}</span><div>${t}</div></div>`;
-  if(tab==='stu') h+=`<h4>🚀 이렇게 시작해요</h4>
-   ${S(1,'<b>🏠 처음</b> 화면에서 공부할 <b>단어 묶음</b>을 눌러요. 처음이면 <b>🌱 초등 필수</b>부터!')}
-   ${S(2,'먼저 <b>한 번에 공부할 양</b>(10, 20, 30, 50개)을 고르고 <b>1일차, 2일차</b>를 골라요. 다 외웠으면 옆의 <b>완료</b>에 체크하면 ✅ 표시가 남고, 다음에 열면 안 끝낸 일차부터 보여 줘요.')}
-   ${S(3,'<b>🃏 카드로 공부하기</b>를 눌러요. 사진과 영어를 보고 뜻을 떠올린 다음, <b>카드를 누르면 뜻</b>이 나와요.')}
-   ${S(4,'옆으로 밀거나 <b>다음 ▶</b>을 눌러 넘겨요. <b>🔊 듣기</b>로 발음을, <b>🔊 예문</b>으로 예문을 들어 봐요. 카드 아래 <b>📖 예문</b>을 읽으면 단어가 어떻게 쓰이는지 알 수 있어요.')}
-   ${S(5,'다 외운 것 같으면 <b>📝 시험 보기</b>! 모든 단어가 섞여서 한 번씩 나와요.')}
-   <h4>🎧 귀로 외우기 (반복 듣기)</h4><ul><li><b>🔁 3번 듣기</b>: 그 단어 발음을 여러 번 되풀이해 들려줘요.</li><li><b>🎧 자동 반복 듣기</b>: 카드가 저절로 넘어가면서 영어 발음, 우리말 뜻, 예문을 차례로 읽어 줘요. 이어폰을 끼고 들으며 외워 보세요.</li><li>몇 번씩 들을지, 빠르기, 계속 반복할지는 카드 아래 <b>반복 듣기 설정</b>에서 바꿔요.</li></ul>
-   <h4>📝 시험은 세 가지예요</h4><ul><li><b>영어 보고 뜻 고르기</b>: 가장 쉬워요.</li><li><b>사진과 뜻 보고 영어 고르기</b>: 보통이에요.</li><li><b>철자 쓰기</b>: 어려워요. 막히면 <b>💡 힌트</b>로 첫 글자를 볼 수 있어요.</li></ul>
-   <p>컴퓨터에서는 숫자 키 1~5로 고르고 Enter로 넘어갈 수 있어요.</p>
-   <h4>📕 틀린 단어는 오답 노트에</h4><p>시험에서 틀린 단어는 <b>📕 오답 노트</b>에 저절로 모여요. 오답 노트에서 <b>카드로 공부</b>하고 <b>시험</b>을 다시 보면, <b>맞힌 단어는 오답 노트에서 빠져요.</b> 오답 노트가 텅 빌 때까지 도전!</p>
-   <h4>⏸ 시험 중간에 멈춰도 괜찮아요</h4><p>나갔다 와도 처음 화면에 <b>이어서 풀기</b>가 나와요.</p>
-   <h4>⭐ 내 단어장</h4><p>카드의 <b>⭐ 담기</b>를 누르면 내 단어장에 모을 수 있어요. 헷갈리는 단어만 모아서 공부해 보세요.</p>
-   <p>여러 개를 한꺼번에 담으려면 처음 화면의 <b>🔤 전체 단어 A~Z 보기</b>에서 단어를 눌러 ✔ 체크한 뒤 <b>⭐ 단어장에 담기</b>를 눌러요. 새 단어장을 그 자리에서 만들 수도 있어요.</p>
-   <h4>🖼 사진이 이상해요!</h4><p>카드의 <b>🖼 사진 바꾸기</b>를 눌러요. 직접 <b>찍거나</b>, 앨범에서 고르거나, 인터넷에서 <b>찾아서</b> 고를 수 있어요. 내가 찍은 사진으로 외우면 더 잘 기억나요!</p>
-   <h4>💾 내 기록은 어디에?</h4><p>오답 노트와 단어장은 <b>지금 쓰는 휴대폰(또는 컴퓨터) 안</b>에 저장돼요. 다른 기기에서는 따로예요. 인터넷 기록을 지우면 같이 지워질 수 있어요.</p>
-   <h4>📱 휴대폰 첫 화면에 앱처럼 두기</h4><ul><li><b>안드로이드(크롬)</b>: 오른쪽 위 ⋮ → <b>홈 화면에 추가</b></li><li><b>아이폰(사파리)</b>: 아래 공유 버튼 → <b>홈 화면에 추가</b></li></ul>`;
+  if(tab==='stu') h+=`<div class="easy">
+   <h4>👋 이 앱은 무엇인가요?</h4>
+   <p>영어 단어를 <b>사진 카드</b>로 외우는 앱이에요. 다 외우면 <b>시험</b>으로 확인해요.</p>
+
+   <h4>🚀 오늘 공부하는 순서</h4>
+   ${S(1,'<b>🏠 처음</b> 화면에서 단어 묶음을 하나 눌러요.<br>처음이라면 <b>🌱 초등 필수</b>를 눌러요.')}
+   ${S(2,'<b>① 한 번에 공부할 양</b>을 골라요.<br>처음이면 <b>10개</b>나 <b>20개</b>가 좋아요.')}
+   ${S(3,'<b>② 오늘 할 일차</b>를 골라요.<br>앱이 아직 안 끝낸 날을 먼저 골라 줘요.')}
+   ${S(4,'<b>🃏 카드로 공부하기</b>를 눌러요.')}
+   ${S(5,'<b>📝 시험 보기</b>로 잘 외웠는지 확인해요.')}
+
+   <h4>🃏 카드는 이렇게 봐요</h4>
+   <ul>
+   <li>사진과 영어를 보고 뜻을 <b>먼저 떠올려</b> 봐요.</li>
+   <li><b>카드를 톡 누르면</b> 뜻이 나와요.</li>
+   <li><b>🔊 듣기</b>를 누르면 발음이 나와요. 따라 말해 봐요.</li>
+   <li><b>📖 예문</b>은 그 단어가 들어간 짧은 문장이에요.</li>
+   <li>다음 카드는 <b>다음 ▶</b>을 누르거나 카드를 옆으로 밀어요.</li>
+   </ul>
+
+   <h4>✅ 외웠으면 「외웠어요」</h4>
+   <p>뜻을 안 보고도 알면 <b>✅ 외웠어요</b>를 눌러요.</p>
+   <ul>
+   <li>그 카드는 <b>다시 나오지 않아요.</b> 모르는 카드만 남아요.</li>
+   <li>외운 카드는 처음 화면의 <b>✅ 외운 단어</b>에 모여요.</li>
+   <li>한 일차를 다 외우면 그날은 저절로 <b>✅ 완료</b>가 돼요.</li>
+   <li>시험에서 틀리면 외운 단어에서 빠져요. 다시 카드로 나와요.</li>
+   <li>잘못 눌렀으면 외운 단어에서 <b>↩</b>를 눌러 되돌려요.</li>
+   </ul>
+
+   <h4>📊 내가 얼마나 외웠나요?</h4>
+   <p>처음 화면과 <b>⭐ 내 단어장</b>에 <b>초록 막대</b>가 있어요. 막대가 길수록 많이 외운 거예요.<br>「외움 120 / 800」은 800개 가운데 120개를 외웠다는 뜻이에요.</p>
+
+   <h4>📝 시험은 세 가지예요</h4>
+   <ul>
+   <li><b>영어 보고 뜻 고르기</b> 🙂 제일 쉬워요. 처음엔 이것!</li>
+   <li><b>사진 보고 영어 고르기</b> 😐 보통이에요.</li>
+   <li><b>철자 쓰기</b> 😤 어려워요. 막히면 <b>💡 힌트</b>를 눌러요.</li>
+   </ul>
+   <p>시험이 끝나면 <b>이 일차를 완료로 표시하기</b>를 눌러 체크할 수 있어요.</p>
+
+   <h4>📕 틀린 단어는 오답 노트로</h4>
+   <p>시험에서 틀린 단어는 <b>📕 오답 노트</b>에 저절로 모여요.<br>오답 노트에서 다시 시험을 보고 맞히면 빠져요. <b>오답 노트를 텅 비우면 성공!</b></p>
+
+   <h4>🎧 귀로 외우기</h4>
+   <ul>
+   <li><b>🔁 3번 듣기</b>: 같은 발음을 여러 번 들려줘요.</li>
+   <li><b>🎧 자동 반복 듣기</b>: 카드가 혼자 넘어가며 영어, 뜻, 예문을 읽어 줘요. 이어폰을 끼고 들어요.</li>
+   </ul>
+
+   <h4>⭐ 나만의 단어장</h4>
+   <p>헷갈리는 단어는 카드의 <b>⭐ 담기</b>를 눌러 모아요. 담는 창에서 새 단어장도 만들 수 있어요.<br>많이 담고 싶으면 처음 화면의 <b>🔤 전체 단어 A~Z 보기</b>에서 단어를 눌러 ✔ 체크해요.</p>
+
+   <h4>⏸ 중간에 그만둬도 괜찮아요</h4>
+   <p>시험을 보다 나가도 처음 화면에 <b>이어서 풀기</b>가 나와요.</p>
+
+   <h4>🖼 사진이 이상해요</h4>
+   <p>카드의 <b>🖼 사진 바꾸기</b>를 눌러요. 직접 찍거나 앨범이나 인터넷에서 골라요.</p>
+
+   <h4>💾 내 기록은 어디에 있나요?</h4>
+   <p>지금 쓰는 <b>이 휴대폰 안</b>에만 있어요. 다른 휴대폰에서는 처음부터예요.<br>휴대폰을 바꿀 때는 맨 아래 <b>💾 전체 백업 파일</b>을 만들어 옮겨요.</p>
+
+   <h4>📱 앱처럼 쓰기</h4>
+   <ul><li><b>안드로이드</b>: 크롬 오른쪽 위 ⋮ → <b>홈 화면에 추가</b></li><li><b>아이폰</b>: 사파리 아래 공유 버튼 → <b>홈 화면에 추가</b></li></ul>
+   </div>`;
   else h+=`<h4>📚 들어 있는 단어</h4><p><b>2022 개정 영어과 교육과정 기본 어휘 3,000개</b>(교육부 고시 제2022-33호 [별책 14])를 모두 넣었습니다. 교육과정의 표시대로 나눴습니다.</p>
    <ul><li>🌱 <b>초등 필수 800</b>: 교육과정에서 * 표시(초등학교 권장)</li><li>🌿 <b>중고등 필수 1,200</b>: ** 표시(중학교, 고등 공통과목 권장)</li><li>🌳 <b>고등 선택 1,000</b>: 표시 없음(그 밖의 과목 권장)</li></ul>
    <p>교육과정 목록에는 <b>단어만</b> 있습니다. 한글 뜻, 품사, 영역 묶음은 학습용으로 붙인 것이라 교과서 뜻과 다를 수 있습니다. 괄호 속 파생어(예: able → disabled)는 카드 뒷면 「함께 알아 두기」로 보여 줍니다.</p>
@@ -754,17 +837,18 @@ VIEWS.help=()=>{const tab=ST.tab||'stu';
    ${S('+','<b>📋 붙여넣어 바로 만들기</b>(⭐ 내 단어장 화면): 이름을 쓰고 단어 목록을 붙여 넣으면 단어장이 바로 생깁니다. 양식은 입력 칸 위 안내를 보세요. 한 줄에 단어 하나, 또는 「단어, 뜻」. 뜻 없는 단어는 한 줄에 쉼표로 여러 개 써도 됩니다. 엑셀이나 한글 표의 「영어 | 뜻」 두 칸을 복사해 붙여도 됩니다. <b>👀 미리 보기</b>로 어떻게 읽혔는지 먼저 확인할 수 있습니다.')}
    ${S('+','<b>➕ 추가 단어집</b>: 기본 3,000단어에 없는 단어는 카드가 자동으로 만들어지고 처음 화면의 추가 단어집에 모입니다. 발음 듣기는 되고 사진은 인터넷에서 찾아 붙지만, 뜻은 붙여 넣을 때 함께 써야 하며 예문은 붙지 않습니다. 뜻을 빠뜨렸으면 추가 단어집에서 ✏️로 넣습니다.')}
    ${S(5,'필요하면 사진을 바꾼 뒤 <b>💾 단어장 파일로 저장</b>. 그 파일을 학급 채팅방 등으로 보내면 학생은 <b>📂 단어장 파일 열기</b>로 받습니다(바꾼 사진 포함).')}
+   <h4>✅ 외운 단어와 진도</h4><p>학생이 카드에서 <b>✅ 외웠어요</b>를 누르면 그 단어는 카드 공부에서 빠지고 <b>외운 단어</b>에 쌓입니다. 시험에서 틀리면 외운 단어에서 다시 빠지므로, 외웠다고 누르기만 하고 넘어가는 것을 시험이 걸러 줍니다. 한 일차의 단어를 모두 외우면 그 일차는 자동으로 완료됩니다. 처음 화면과 내 단어장 목록에 「외움 n / 전체」 막대가 보입니다.</p>
    <h4>🔒 개인정보</h4><p>이 앱은 로그인이 없고, 학생 기록을 어디에도 보내지 않습니다. 모든 기록은 각자의 기기 안에만 남습니다. 인터넷은 사진을 불러오고 찾을 때만 씁니다.</p>
    <h4>⚠️ 알아 둘 점</h4><ul><li>사진은 인터넷으로 불러옵니다. 인터넷이 안 되거나 학교망에서 위키백과가 막혀 있으면 그림문자로 대신 보입니다.</li>
    <li>기기마다 기록이 따로입니다. 학생 오답을 선생님이 한꺼번에 모아 보는 기능은 없습니다.</li><li>발음 듣기는 기기에 들어 있는 음성을 씁니다. 기기에 따라 목소리가 다릅니다.</li></ul>
    <h4>사진 출처</h4><p class="small muted">기본 사진은 위키백과(Wikimedia Commons)의 자유 이용 사진이며 각 사진의 저작권은 원작자에게 있습니다. 수업 목적으로 쓰고, 다시 배포할 때는 위키미디어의 이용 조건을 따라 주세요.</p>`;
   h+=`</div><div class="card"><b>전체 백업</b><div class="muted small" style="margin:4px 0 8px">휴대폰을 바꿀 때 오답 노트까지 옮기려면 쓰세요.</div><div class="row"><button class="btn" onclick="backupAll()">💾 전체 백업 파일</button><button class="btn" onclick="restorePick()">📂 백업 되살리기</button></div></div>`;
   return h;};
-function backupAll(){const data={app:'vocab-photo-cards-backup',ver:1,wrong:WRONG,lists:LISTS,custom:CUSTOM,photos:PH,settings:SET,done:DONE};
+function backupAll(){const data={app:'vocab-photo-cards-backup',ver:1,wrong:WRONG,lists:LISTS,custom:CUSTOM,photos:PH,settings:SET,done:DONE,known:KNOWN};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download='단어카드_백업_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),1000);}
 function restorePick(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{const f=i.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());if(d.app!=='vocab-photo-cards-backup')throw 0;if(!confirm('지금 기록을 백업 파일 내용으로 바꿀까요?'))return;
-    WRONG=d.wrong||{};LISTS=d.lists||[];CUSTOM=d.custom||{};SET=d.settings||SET;DONE=d.done||{};LS.set('done',DONE);saveWrong();saveLists();saveCustom();saveSet();
+    WRONG=d.wrong||{};LISTS=d.lists||[];CUSTOM=d.custom||{};SET=d.settings||SET;DONE=d.done||{};KNOWN=d.known||{};saveKnown();LS.set('done',DONE);saveWrong();saveLists();saveCustom();saveSet();
     for(const [w,v] of Object.entries(d.photos||{}))await setPhoto(w,v);toast('되살렸어요');go('home');}catch(e){alert('이 앱의 백업 파일이 아니에요.');}};i.click();}
 
 /* ===== 시작 ===== */
