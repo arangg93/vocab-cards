@@ -562,21 +562,21 @@ function addSelTo(id){let L;
 
 /* ---- 내 단어장 ---- */
 VIEWS.lists=()=>{
-  let h0='';
-  if(!LISTS.length) h0+=`<div class="card muted center">아직 단어장이 없어요. 위에서 이름을 쓰고 만들어 보세요.</div>`;
-  if(LISTS.length) h0+=`<h2>📒 내 단어장 ${LISTS.length}개</h2><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">`+LISTS.map(L=>`<div class="card" style="margin:0"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">⭐ ${esc(L.name)}</b><span class="muted">${L.words.length}단어</span></div>
+  /* 순서: ① 내가 만든 단어장 ② A~Z 담기, 나눠 주기 ③ 새 단어장에 목록 추가하기 (2026-10-08 선생님 지시) */
+  let h=topBar('⭐ 내 단어장');
+  if(LISTS.length) h+=`<h2>📒 내 단어장 ${LISTS.length}개</h2><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">`+LISTS.map(L=>`<div class="card" style="margin:0"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">⭐ ${esc(L.name)}</b><span class="muted">${L.words.length}단어</span></div>
      <div class="small muted" style="margin-top:6px">${kbar(L.words)}${(()=>{const d=Object.keys(DONE['list:'+L.id]||{}).length;return d?` · 완료 ${d}일차`:'';})()}</div>
      <div class="row" style="margin-top:10px"><button class="btn pri" onclick="go('set',{id:'list:${L.id}'})">공부, 시험</button><button class="btn" onclick="go('listEdit',{id:'${L.id}'})">✏️ 고치기</button></div></div>`).join('')+`</div>`;
-  let h=topBar('⭐ 내 단어장')+(LISTS.length?h0+'<h2>➕ 새 단어장 만들기</h2>':'')+`<div class="card"><div class="muted small" style="margin-bottom:8px">내가 고른 단어로 나만의 단어장을 만들어요. 기본 단어에 없는 단어도 넣을 수 있어요.</div>
-   <div style="display:flex;gap:8px"><input type="text" id="nl" placeholder="새 단어장 이름 (예: 1단원)" onkeydown="if(event.key==='Enter')newList()"><button class="btn pri" onclick="newList()">만들기</button></div></div>`;
-  h+=`<div class="card"><b>📋 단어 목록 붙여넣어 바로 만들기</b><div class="muted small" style="margin:4px 0 8px">교과서나 학습지의 단어 목록을 붙여 넣으면 단어장이 바로 생겨요.</div>
+  else h+=`<div class="card muted center">아직 단어장이 없어요. 아래 <b>새 단어장에 목록 추가하기</b>에서 만들어 보세요.</div>`;
+  h+=`<button class="setbtn" style="width:100%;margin-bottom:12px" onclick="go('browse')"><span class="em">🔤</span><div><b>전체 단어 A~Z에서 체크해서 담기</b><span>기본 3,000단어를 알파벳 순으로 보며 골라요</span></div></button>
+   <h2>📤 나눠 주기, 받기</h2><div class="card"><div class="muted small" style="margin-bottom:10px">선생님이 만든 단어장을 파일로 저장해서 학생에게 보내면, 학생은 <b>단어장 파일 열기</b>로 그대로 받을 수 있어요. 바꾼 사진도 함께 들어가요.</div>
+     <div class="row"><button class="btn" onclick="exportLists()">💾 단어장 파일로 저장</button><button class="btn" onclick="$('#jsonPick').click()">📂 단어장 파일 열기</button></div></div>`;
+  h+=`<h2>➕ 새 단어장에 목록 추가하기</h2><div class="card"><div class="muted small" style="margin-bottom:8px">내가 고른 단어로 나만의 단어장을 만들어요. 기본 단어에 없는 단어도 넣을 수 있어요.</div>
+   <div style="display:flex;gap:8px"><input type="text" id="nl" placeholder="새 단어장 이름 (예: 1단원)" onkeydown="if(event.key==='Enter')newList()"><button class="btn pri" onclick="newList()">만들기</button></div></div>
+   <div class="card"><b>📋 단어 목록 붙여넣어 바로 만들기</b><div class="muted small" style="margin:4px 0 8px">교과서나 학습지의 단어 목록을 붙여 넣으면 단어장이 바로 생겨요.</div>
    <input type="text" id="pasteName" placeholder="단어장 이름 (예: 2과 단어)">${pasteGuide('pasteTxt')}
    <textarea id="pasteTxt" style="margin-top:8px" placeholder="여기에 붙여 넣으세요"></textarea>
-   <div class="row" style="margin-top:8px"><button class="btn ghost" onclick="previewPaste('pasteTxt','pastePrev')">👀 미리 보기</button><button class="btn pri" onclick="createFromPaste()">📋 단어장 만들기</button></div><div id="pastePrev"></div></div>
-   <button class="setbtn" style="width:100%;margin-bottom:12px" onclick="go('browse')"><span class="em">🔤</span><div><b>전체 단어 A~Z에서 체크해서 담기</b><span>기본 3,000단어를 알파벳 순으로 보며 골라요</span></div></button>`;
-  if(!LISTS.length) h+=h0;
-  h+=`<h2>📤 나눠 주기, 받기</h2><div class="card"><div class="muted small" style="margin-bottom:10px">선생님이 만든 단어장을 파일로 저장해서 학생에게 보내면, 학생은 <b>단어장 파일 열기</b>로 그대로 받을 수 있어요. 바꾼 사진도 함께 들어가요.</div>
-     <div class="row"><button class="btn" onclick="exportLists()">💾 단어장 파일로 저장</button><button class="btn" onclick="$('#jsonPick').click()">📂 단어장 파일 열기</button></div></div>`;
+   <div class="row" style="margin-top:8px"><button class="btn ghost" onclick="previewPaste('pasteTxt','pastePrev')">👀 미리 보기</button><button class="btn pri" onclick="createFromPaste()">📋 단어장 만들기</button></div><div id="pastePrev"></div></div>`;
   return h;
 };
 function newList(){const n=($('#nl').value||'').trim();if(!n)return toast('단어장 이름을 써 주세요');
@@ -586,6 +586,7 @@ VIEWS.listEdit=()=>{
   const tab=ST.tab||'type';
   let h=topBar('✏️ '+esc(L.name),"go('lists')");
   h+=`<div class="card"><div class="muted small">지금 ${L.words.length}단어</div><div class="row" style="margin-top:8px"><button class="btn pri" onclick="go('set',{id:'list:${L.id}'})">공부, 시험하러 가기</button></div></div>`;
+  h+=`<div class="row" style="margin-bottom:12px"><button class="btn ghost" onclick="renameList()">이름 바꾸기</button><button class="btn bad" onclick="if(confirm('「${esc(L.name)}」 단어장을 지울까요? (단어 자료와 오답 노트는 그대로 있어요)')){LISTS=LISTS.filter(x=>x.id!=='${L.id}');saveLists();go('lists')}">단어장 지우기</button></div>`;
   h+=`<h2>단어 넣기</h2><div class="tabs"><button class="${tab==='type'?'on':''}" onclick="ST.tab='type';render()">하나씩</button><button class="${tab==='find'?'on':''}" onclick="ST.tab='find';render()">필수 단어에서 찾기</button><button class="${tab==='bulk'?'on':''}" onclick="ST.tab='bulk';render()">여러 개 한꺼번에</button></div>`;
   if(tab==='type') h+=`<div class="card"><input type="text" id="nw" placeholder="영어 단어 (예: apple)" autocapitalize="off" autocomplete="off" onkeydown="if(event.key==='Enter')addTyped()">
      <input type="text" id="nk" placeholder="뜻 (필수 단어면 비워 둬도 자동으로 채워져요)" style="margin-top:8px" onkeydown="if(event.key==='Enter')addTyped()">
@@ -603,7 +604,6 @@ VIEWS.listEdit=()=>{
   h+=`<h2>들어 있는 단어</h2>`;
   if(!L.words.length) h+=`<div class="card muted center">아직 비어 있어요.</div>`;
   h+=`<div class="wl">`+L.words.map(w=>wordRow(entry(w),`<button class="act del" onclick="event.stopPropagation();toggleIn(${jsq(w)})">−</button>`)).join('')+`</div>`;
-  h+=`<h2>단어장 관리</h2><div class="row"><button class="btn ghost" onclick="renameList()">이름 바꾸기</button><button class="btn bad" onclick="if(confirm('「${esc(L.name)}」 단어장을 지울까요? (단어 자료와 오답 노트는 그대로 있어요)')){LISTS=LISTS.filter(x=>x.id!=='${L.id}');saveLists();go('lists')}">단어장 지우기</button></div>`;
   return h;
 };
 function curList(){return LISTS.find(x=>x.id===ST.id);}
