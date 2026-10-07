@@ -1,0 +1,7 @@
+{
+  "tool_name": "mcp__Claude_Browser__javascript_tool",
+  "tool_input_preview": "{\"action\":\"javascript_exec\",\"text\":\"await new Promise(r=>setTimeout(r,1500)); localStorage.clear(); const log=[location.href, typeof go];\\ngo('set',{id:'lv:1',part:'1'}); log.push(document.querySelect...",
+  "error": "javascript_tool failed: TypeError: Cannot read properties of null (reading 'className')\n    at <anonymous>:11:204",
+  "timestamp": "2026-10-07T21:43:15.471Z",
+  "retry_count": 3
+}
