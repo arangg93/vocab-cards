@@ -226,7 +226,7 @@ let EDIT=LS.get('edit',{});
 const saveEdit=()=>LS.set('edit',EDIT);
 function entry(w){const e=entry0(w),o=EDIT[e.w];if(!o)return e;
   const r=Object.assign({},e,{edited:true});if(o.ko!=null&&!e.custom){r.ko=o.ko;r.noko=!o.ko;}if(o.ex!=null)r.ex=o.ex;if(o.exk!=null)r.exk=o.exk;return r;}
-function entry0(w){const k=String(w).toLowerCase();if(BYW[k])return BYW[k];const c=CUSTOM[w]||CUSTOM[k];
+function entry0(w){const k=String(w).toLowerCase();if(BYW[k])return BYW[k];if(!CUSTOM[w]&&CUSTOM[k])w=k;const c=CUSTOM[w];
   return c?{w,lv:0,pos:c.pos||'',ko:c.ko||'(뜻을 넣어 주세요)',noko:!c.ko,cat:'',em:c.em||'📘',img:'',alt:[],der:'',custom:true}:{w,lv:0,pos:'',ko:'(뜻을 넣어 주세요)',cat:'',em:'📘',img:'',alt:[],der:'',custom:true};}
 function posKo(p){return (p||'').split('/').map(x=>POS[x]||x).filter(Boolean).join(', ');}
 function photoOf(e){const c=PH[e.w];if(c==='none')return '';if(c)return c;return e.img;}
@@ -381,7 +381,7 @@ VIEWS.set=()=>{
   h+=`<h2>단어 목록</h2><div class="wl">`+W.map(w=>wordRow(entry(w),ST.id==='wrong'?`<button class="act del" onclick="event.stopPropagation();delete WRONG[${jsq(w)}];saveWrong();render()" title="오답에서 빼기">✓</button>`:'')).join('')+`</div>`;
   return h;
 };
-function wordRow(e,act){
+function wordRow(e,act){e=entry(e.w);
   const wr=WRONG[e.w];
   return `<div class="wi" onclick="openWord(${jsq(e.w)})"><div class="th">${photoHTML(e,true)}</div><div class="tx"><b>${esc(e.w)}</b> ${e.lv?`<span class="pill l${e.lv}">${LV[e.lv].name}</span>`:'<span class="pill">내 단어</span>'}${wr?` <span class="pill" style="background:var(--badbg);color:var(--bad)">✗${wr.n}</span>`:''}${KNOWN[e.w]?' <span class="pill" style="background:var(--okbg);color:var(--ok)">✅ 외움</span>':''}<div>${esc(e.ko)}</div></div>${act||''}</div>`;}
 function openWord(w){go('study',{words:[w],i:0,back:JSON.stringify({view:ST.view,id:ST.id,q:ST.q,part:ST.part}),single:true});}
@@ -391,7 +391,7 @@ VIEWS.search=()=>{
   const q=(ST.q||'').trim(); const ql=q.toLowerCase();
   let h=topBar('🔎 단어 찾기',"go('home')")+`<div class="card" style="display:flex;gap:8px"><input type="search" id="q" value="${esc(q)}" placeholder="영어나 한글" onkeydown="if(event.key==='Enter')go('search',{q:this.value})"><button class="btn pri" onclick="go('search',{q:$('#q').value})">찾기</button></div>`;
   if(!q) return h;
-  const R=DB.filter(e=>e.w.toLowerCase().startsWith(ql)||e.alt.some(a=>a.toLowerCase().startsWith(ql))||e.ko.includes(q)||e.der.toLowerCase().includes(ql)).slice(0,80);
+  const R=DB.filter(e=>e.w.toLowerCase().startsWith(ql)||e.alt.some(a=>a.toLowerCase().startsWith(ql))||e.ko.includes(q)||((EDIT[e.w]||{}).ko||'').includes(q)||e.der.toLowerCase().includes(ql)).slice(0,80);
   Object.keys(CUSTOM).forEach(w=>{if(w.toLowerCase().startsWith(ql)||(CUSTOM[w].ko||'').includes(q))R.push(entry(w));});
   h+=`<div class="muted" style="margin:0 4px 8px">${R.length}개 찾음${R.length>=80?' (앞의 80개만 보여요)':''}</div><div class="wl">`+R.map(e=>wordRow(e,`<button class="act" onclick="event.stopPropagation();pickList(${jsq(e.w)})" title="내 단어장에 담기">＋</button>`)).join('')+`</div>`;
   if(!R.length) h+=`<div class="card muted">기본 어휘에 없는 단어예요. <b>⭐ 내 단어장</b>에서 직접 넣을 수 있어요.</div>`;
@@ -547,7 +547,7 @@ VIEWS.browse=()=>{
     <button class="btn ghost" style="min-height:36px;padding:6px 10px;font-size:14px" onclick="${allOn?`selLetter(false)`:`selLetter(true)`}">${allOn?'이 글자 체크 풀기':'이 글자 모두 체크'}</button></div>`;
   h+=`<div class="wl" style="padding-bottom:70px">`+W.map(e=>{const on=SEL.has(e.w);
     return `<div class="wi ${on?'on':''}" onclick="toggleSel(${jsq(e.w)})"><span class="ck">${on?'✔':''}</span><div class="th">${photoHTML(e,true)}</div>
-      <div class="tx"><b>${esc(e.w)}</b> <span class="pill l${e.lv}">${LV[e.lv].name}</span><div>${esc(e.ko)}</div></div>
+      <div class="tx"><b>${esc(e.w)}</b> <span class="pill l${e.lv}">${LV[e.lv].name}</span><div>${esc(entry(e.w).ko)}</div></div>
       <button class="act" onclick="event.stopPropagation();openWord(${jsq(e.w)})" title="카드 보기">🔍</button></div>`;}).join('')+`</div>`;
   if(SEL.size) h+=`<div class="selbar"><div><b>✔ ${SEL.size}개 체크</b><button class="btn pri" style="min-height:40px" onclick="addSelSheet()">⭐ 단어장에 담기</button><button class="btn ghost" style="min-height:40px;color:var(--bg);border-color:rgba(255,255,255,.3)" onclick="SEL.clear();render()">풀기</button></div></div>`;
   return h;
@@ -598,7 +598,7 @@ VIEWS.listEdit=()=>{
     h+=`<div class="card"><div style="display:flex;gap:8px"><input type="search" id="fq" value="${esc(q)}" placeholder="영어나 한글로 찾기" onkeydown="if(event.key==='Enter'){ST.fq=this.value;render()}"><button class="btn pri" onclick="ST.fq=$('#fq').value;render()">찾기</button></div>
      <div class="row" style="margin-top:8px"><select id="fcat"><option value="">영역 묶음을 통째로 넣기…</option>${Object.entries(CATS).map(([k,[n]])=>`<option value="cat:${k}">${n}</option>`).join('')}${[1,2,3].map(l=>`<option value="lv:${l}">${LV[l].name} 전체</option>`).join('')}</select>
      <button class="btn" onclick="addSet($('#fcat').value)">넣기</button></div></div>`;
-    if(q){const R=DB.filter(e=>e.w.toLowerCase().startsWith(ql)||e.ko.includes(q)).slice(0,60);
+    if(q){const R=DB.filter(e=>e.w.toLowerCase().startsWith(ql)||e.ko.includes(q)||((EDIT[e.w]||{}).ko||'').includes(q)).slice(0,60);
       h+=`<div class="wl">`+R.map(e=>{const has=L.words.includes(e.w);return wordRow(e,`<button class="act ${has?'del':''}" onclick="event.stopPropagation();toggleIn(${jsq(e.w)})">${has?'−':'＋'}</button>`);}).join('')+`</div>`;
       if(!R.length)h+=`<div class="card muted">필수 단어에 없어요. <b>하나씩</b> 칸에서 뜻과 함께 넣어 주세요.</div>`;}}
   if(tab==='bulk') h+=`<div class="card">${pasteGuide('bulk')}<textarea id="bulk" style="margin-top:8px" placeholder="여기에 붙여 넣으세요"></textarea>
@@ -731,7 +731,7 @@ function editCard(w){const e=entry(w),o0=entry0(w);
   setTimeout(()=>{const i=$('#edKo');if(i)i.focus();},50);}
 function saveCardEdit(w){const e0=entry0(w),ko=$('#edKo').value.trim(),ex=$('#edEx').value.trim(),exk=$('#edExk').value.trim();
   if(e0.custom){const c=CUSTOM[e0.w]||(CUSTOM[e0.w]={ko:'',pos:'',em:'📘'});c.ko=ko;saveCustom();}
-  const o={};if(!e0.custom&&ko!==e0.ko)o.ko=ko;if(ex!==(e0.ex||''))o.ex=ex;if(exk!==(e0.exk||''))o.exk=exk;
+  const o={};if(!e0.custom&&!ko)toast('뜻은 비울 수 없어서 원래 뜻으로 두었어요');if(!e0.custom&&ko&&ko!==e0.ko)o.ko=ko;if(ex!==(e0.ex||''))o.ex=ex;if(exk!==(e0.exk||''))o.exk=exk;
   if(Object.keys(o).length)EDIT[e0.w]=o;else delete EDIT[e0.w];saveEdit();closeModal();render();toast('고쳤어요');}
 function resetCardEdit(w){delete EDIT[entry0(w).w];saveEdit();closeModal();render();toast('원래대로 돌려놨어요');}
 function modal(html){closeModal();const m=document.createElement('div');m.className='modal';m.id='modal';m.innerHTML=`<div class="sheet">${html}</div>`;
