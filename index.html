@@ -377,6 +377,8 @@ VIEWS.home=()=>{
   h+=`<h2>🗂 영역별 단어 묶음</h2><div class="grid2">`;
   Object.entries(CATS).forEach(([k,[n,em]])=>{const c=DB.filter(e=>e.cat===k).length;if(c)h+=`<button class="setbtn" onclick="go('set',{id:'cat:${k}'})"><span class="em">${em}</span><div><b>${n}</b><span>${c}단어</span></div></button>`;});
   h+=`</div>`;
+  h+=`<a class="setbtn" style="width:100%;margin-bottom:8px;text-decoration:none;color:inherit" href="https://arangg93.github.io/jp-cards/"><span class="em">🗾</span><div><b>일본어 단어 앱으로 가기</b><span>히라가나, 가타카나와 회화 필수 단어</span></div></a>`;
+  h+=`<h2>🎧 듣기 공부</h2><button class="setbtn" style="width:100%;margin-bottom:8px" onclick="go('links')"><span class="em">🎬</span><div><b>영화, 드라마 회화 듣기 사이트 모음</b><span>무료 영상과 강좌 (새 창으로 열려요)</span></div></button>`;
   if(LISTS.length){h+=`<h2>⭐ 내 단어장</h2><div style="display:flex;flex-direction:column;gap:8px">`;
     LISTS.forEach(L=>h+=`<button class="setbtn" onclick="go('set',{id:'list:${L.id}'})"><span class="em">⭐</span><div style="flex:1"><b>${esc(L.name)}</b>${kbar(L.words)}</div></button>`);h+=`</div>`;}
   return h;
@@ -835,6 +837,13 @@ async function searchPhotos(){const q=$('#phq').value.trim();if(!q)return;const 
   const uniq=[...new Set(out)].slice(0,24);
   if(!uniq.length){box.innerHTML='사진을 못 찾았어요. 다른 말로 찾거나(영어 추천), 직접 찍어서 올려 주세요. 학교 인터넷에서 막혀 있을 수도 있어요.';return;}
   box.innerHTML='<div style="margin-bottom:6px">마음에 드는 사진을 누르세요 👇</div><div class="pgrid">'+uniq.map(u=>`<button onclick="setPhotoDone(${jsq(u)})"><img src="${esc(u)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></button>`).join('')+'</div>';}
+
+/* ---- 듣기 공부 링크 (2026-10-09 선생님 요청) ---- */
+const LINKS = [{"h": "영화와 드라마로 회화 듣기", "items": [{"em": "🎬", "t": "Learn English With TV Series", "d": "영화, 드라마 장면을 보며 실제 대화 표현과 발음을 배우는 유튜브 채널", "u": "https://www.youtube.com/@LearnEnglishWithTVSeries"}, {"em": "🔎", "t": "YouGlish", "d": "단어나 문장을 넣으면 그 말이 나오는 유튜브 장면을 찾아 원어민 발음으로 들려줘요", "u": "https://youglish.com/"}]}, {"h": "쉬운 영어 듣기", "items": [{"em": "📻", "t": "BBC Learning English", "d": "영국 BBC의 무료 영어 학습 사이트. 짧은 듣기와 회화 강좌", "u": "https://www.bbc.co.uk/learningenglish/"}, {"em": "▶️", "t": "BBC Learning English (유튜브)", "d": "짧은 영상으로 생활 회화와 발음을 배워요", "u": "https://www.youtube.com/@bbclearningenglish"}, {"em": "🎤", "t": "English Speeches", "d": "유명한 연설을 자막과 함께 들어요. 조금 익숙해지면", "u": "https://www.youtube.com/@ENGLISHSPEECHES"}]}];
+VIEWS.links=()=>{let h=topBar('🎧 영어 회화 듣기',"go('home')");
+  h+=`<div class="card small muted">모두 무료로 볼 수 있는 곳이에요. 누르면 새 창으로 열려요. 학교 인터넷에서는 막혀 있을 수 있어요.</div>`;
+  LINKS.forEach(g=>{h+=`<h2>${esc(g.h)}</h2><div style="display:flex;flex-direction:column;gap:8px">`+g.items.map(x=>`<a class="setbtn" style="text-decoration:none;color:inherit" href="${esc(x.u)}" target="_blank" rel="noopener"><span class="em">${x.em}</span><div><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div></a>`).join('')+`</div>`;});
+  return h;};
 
 /* ---- 사용법 ---- */
 VIEWS.help=()=>{const tab=ST.tab||'stu';
