@@ -84,6 +84,32 @@ label.chk{display:flex;align-items:center;gap:8px;padding:6px 0}
 .tools .btn{min-height:40px;padding:8px 12px;font-size:14px}
 .navrow{display:flex;gap:10px;margin-top:12px}
 .navrow .btn{flex:1;font-size:18px}
+.tight .wbody{padding:8px 12px 10px}.tight .wword{font-size:27px}.tight .wpos{margin-top:0}.tight .wmean{margin-top:6px;font-size:18px;min-height:0}.tight .wmean.hide{padding:6px}
+.tight .ex{margin-top:6px;padding:6px 10px;font-size:15px;line-height:1.35}.tight .ex .exk{font-size:13px}.tight .progress{margin:2px 0 6px}.tight .tools.cmp{margin-top:6px}.tight .navrow{margin-top:8px}.tight .navrow .btn{min-height:42px}
+.wcard .photo{aspect-ratio:16/9}.wcard .photo .emo{font-size:80px}.wcard .scene .sc{font-size:60px}
+.wcard .wbody{padding:10px 14px 12px}.wcard .wword{font-size:31px}.wcard .wmean{margin-top:8px}.wcard .wmean.hide{padding:7px}
+.wcard .ex{margin-top:8px;padding:7px 10px;font-size:15px;line-height:1.4}.wcard .ex .exk{font-size:13.5px}
+.tools.cmp{flex-wrap:nowrap;gap:4px;margin-top:10px}
+.tools.cmp .btn{flex:1 1 0;min-width:0;min-height:38px;padding:6px 2px;font-size:12.5px;gap:2px;white-space:nowrap}
+.navrow .btn{min-height:46px}
+details.card>summary{cursor:pointer;font-weight:700}
+.sl{display:flex;flex-direction:column;gap:6px}
+.sc-card{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:6px 8px;transition:opacity .25s,transform .25s}
+.sc-card.gone{opacity:0;transform:translateX(40px);pointer-events:none}
+.sc-card .th{width:44px;height:44px;flex:none;border-radius:9px;overflow:hidden;background:#eef1f7}
+.sc-card .th img{width:100%;height:100%;object-fit:cover}.sc-card .th .sc.sm{font-size:22px}
+.sc-card .bd{flex:1;min-width:0}
+.sc-card .w{font-size:18px;font-weight:800;word-break:break-word}
+.sc-card .ip{font-size:12.5px;color:var(--pri);margin-left:4px}
+.sc-card .m{font-size:15px;font-weight:700;line-height:1.3;transition:filter .2s}
+.sc-card .ps{font-size:11.5px;color:var(--sub);font-weight:400;margin-right:4px}
+.sl.hide .sc-card:not(.open) .m{filter:blur(6px);user-select:none}
+.sc-card .x{display:none;font-size:13.5px;line-height:1.4;margin-top:3px}
+.sc-card.open .x{display:block}
+.sc-card .x .k{color:var(--sub);font-size:12.5px}
+.sc-card .ac{display:flex;gap:4px;flex:none}
+.sc-card .ac .btn{min-height:34px;width:38px;padding:0;font-size:15px}
+.slbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 12px}
 .progress i{display:block;height:100%;background:var(--pri)}
 /* 시험 */
@@ -300,13 +326,15 @@ function kbar(words){const n=words.length,k=knownCount(words);return `<span clas
 function markKnown(w){KNOWN[w]=Date.now();saveKnown();if(WRONG[w]){delete WRONG[w];saveWrong();}
   if(ST.single){toast('✅ 외운 단어에 넣었어요');return render();}
   const wasLast=ST.i>=ST.words.length-1;ST.words=ST.words.filter(x=>x!==w);ST.flip=false;ST.lastSpoken=null;
-  let msg='✅ 외웠어요! 다시 안 나와요';
-  try{const b=JSON.parse(ST.back||'null');if(b&&b.id&&b.part&&b.part!=='all'&&b.id!=='wrong'&&b.id!=='known'){const S=setInfo(b.id);const P=partWords(S.words,b.part);
-    if(P.length&&P.every(x=>KNOWN[x])&&!isDone(b.id,b.part)){DONE[b.id]=DONE[b.id]||{};DONE[b.id][b.part]=1;LS.set('done',DONE);msg='🏆 이 일차 단어를 다 외웠어요! 완료로 표시했어요';}}}catch(e){}
+  const msg=partDoneMsg('✅ 외웠어요! 다시 안 나와요');
   toast(msg);
   if(wasLast&&ST.words.length){toast(msg+' · 다 봤어요!');return goBack();}
   if(!ST.words.length){const b=JSON.parse(ST.back||'{"view":"home"}');if(b.part&&b.part!=='all'&&isDone(b.id,b.part))delete b.part;go(b.view||'home',b);return;}
   ST.i=Math.min(ST.i,ST.words.length-1);render();}
+function partDoneMsg(msg){
+  try{const b=JSON.parse(ST.back||'null');if(b&&b.id&&b.part&&b.part!=='all'&&b.id!=='wrong'&&b.id!=='known'){const S=setInfo(b.id);const P=partWords(S.words,b.part);
+    if(P.length&&P.every(x=>KNOWN[x])&&!isDone(b.id,b.part)){DONE[b.id]=DONE[b.id]||{};DONE[b.id][b.part]=1;LS.set('done',DONE);msg='🏆 이 일차 단어를 다 외웠어요! 완료로 표시했어요';}}}catch(e){}
+  return msg;}
 function unKnown(w){delete KNOWN[w];saveKnown();toast('다시 공부할 단어로 돌려놨어요');render();}
 function isDone(id,part){return !!(DONE[id]&&DONE[id][part]);}
 function toggleDone(id,part,on){DONE[id]=DONE[id]||{};if(on)DONE[id][part]=1;else delete DONE[id][part];LS.set('done',DONE);render();if(on)toast('✅ 완료로 표시했어요');}
@@ -315,7 +343,7 @@ function setSize(z){SET.size=+z;saveSet();ST.part=null;render();}
 
 /* ===== 화면 이동 ===== */
 let ST = {view:'home'};
-function go(view,opt){stopVoice();ST=Object.assign({view},opt||{});window.scrollTo(0,0);render();
+function go(view,opt){stopVoice();$('#app').classList.remove('tight');ST=Object.assign({view},opt||{});window.scrollTo(0,0);render();
   try{history.replaceState(null,'','#'+view);}catch(e){} }
 document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)go(b.dataset.go);});
 function render(){
@@ -377,6 +405,7 @@ VIEWS.set=()=>{
   const kn=ST.id==='known'?0:knownCount(W), left=W.length-kn;
   h+=`<div class="card"><div class="muted" style="margin-bottom:10px">고른 단어 <b style="color:var(--ink)">${W.length}개</b>${ST.id==='known'?'':` · 외움 <b style="color:var(--ok)">${kn}개</b> · 남은 단어 <b style="color:var(--ink)">${left}개</b>`}</div>
     ${ST.id==='known'||left?`<button class="btn pri block" style="margin-bottom:8px;font-size:17px" onclick="startStudy()">🃏 카드로 공부하기${ST.id==='known'?'':` (남은 ${left}개)`}</button>`:`<div class="card center" style="background:var(--okbg);margin:0 0 8px"><b>🏆 여기 단어는 다 외웠어요!</b><div class="muted small">시험으로 확인해 보세요</div></div>`}
+    ${ST.id==='known'||left?`<button class="btn ghost block" style="margin-bottom:8px;font-size:16px" onclick="startScroll()">📜 쭉 내려 보며 외우기${ST.id==='known'?'':` (${left}개 한 번에)`}</button>`:''}
     ${kn?`<button class="btn ghost block" style="margin-bottom:8px" onclick="startStudy(true)">🔁 외운 단어까지 모두 다시 보기</button>`:''}
     <div class="row"><button class="btn ok" onclick="go('testSetup',{id:ST.id,part:ST.part||'all'})" style="font-size:17px">📝 시험 보기</button></div></div>`;
   if(ST.id==='wrong') h+=`<button class="btn bad block" style="margin-bottom:12px" onclick="if(confirm('오답 노트를 모두 비울까요?')){WRONG={};saveWrong();go('home')}">오답 노트 모두 비우기</button>`;
@@ -421,29 +450,60 @@ VIEWS.study=()=>{
    <div class="wpos">${esc(posKo(e.pos))}${e.alt.length?` · 다른 철자 ${esc(e.alt.join(', '))}`:''}</div>
    <div class="wmean ${show?'':'hide'}">${show?esc(e.ko):'👆 눌러서 뜻 보기'}</div>
    ${show&&e.der?`<div class="muted small" style="margin-top:6px">함께 알아 두기: ${esc(e.der)}</div>`:''}
-   ${e.ex?`<div class="ex" onclick="event.stopPropagation()">📖 ${exHTML(e)} <button onclick="speakEx(${jsq(e.w)})">🔊 예문</button>${show&&e.exk?`<div class="exk">${esc(e.exk)}</div>`:'<div class="exk">(뜻을 보면 해석도 나와요)</div>'}</div>`:''}</div></div>
-   <div class="tools"><button class="btn" onclick="speak(${jsq(e.w)})">🔊 듣기</button><button class="btn" onclick="repeatWord(${jsq(e.w)})">🔁 ${SET.rep||3}번 듣기</button><button class="btn" onclick="photoSheet(${jsq(e.w)})">🖼 사진 바꾸기</button><button class="btn" onclick="pickList(${jsq(e.w)})">⭐ 담기</button><button class="btn" onclick="editCard(${jsq(e.w)})">✏️ 고치기</button>
+   ${e.ex?`<div class="ex" onclick="event.stopPropagation()">📖 ${exHTML(e)} <button onclick="speakEx(${jsq(e.w)})">🔊 예문</button>${show&&e.exk?`<div class="exk">${esc(e.exk)}</div>`:''}</div>`:''}</div></div>
+   <div class="tools cmp"><button class="btn" onclick="speak(${jsq(e.w)})">🔊 듣기</button><button class="btn" onclick="repeatWord(${jsq(e.w)})">🔁 ${SET.rep||3}번</button>${ST.single?'':ST.auto?`<button class="btn bad" onclick="stopVoice();render()">⏹ 멈춤</button>`:`<button class="btn" onclick="autoListen()" title="자동 반복 듣기 (카드가 저절로 넘어가요)">🎧 자동</button>`}<button class="btn" onclick="photoSheet(${jsq(e.w)})">🖼 사진</button><button class="btn" onclick="pickList(${jsq(e.w)})">⭐ 담기</button><button class="btn" onclick="editCard(${jsq(e.w)})">✏️ 고치기</button></div><div class="tools" ${ST.single?'':'style="display:none"'}>
    ${ST.single?(KNOWN[e.w]?`<button class="btn" onclick="unKnown(${jsq(e.w)})">↩ 다시 외우기</button>`:`<button class="btn ok" onclick="markKnown(${jsq(e.w)})">✅ 외웠어요</button>`):''}</div>`;
   if(!ST.single){h+=`<div class="navrow"><button class="btn ghost" ${i===0?'disabled':''} onclick="ST.i--;ST.flip=false;render()">◀ 이전</button>${ST.id==='known'||ST.all?'':`<button class="btn ok" onclick="markKnown(${jsq(e.w)})">✅ 외웠어요</button>`}<button class="btn pri" onclick="nextCard()">${i===W.length-1?'끝 🎉':'다음 ▶'}</button></div>
-   ${ST.auto?`<button class="btn bad block" style="margin-top:10px;font-size:17px" onclick="stopVoice();render()">⏹ 자동 듣기 멈추기</button>`
-     :`<button class="btn ok block" style="margin-top:10px;font-size:17px" onclick="autoListen()">🎧 자동 반복 듣기 (카드가 저절로 넘어가요)</button>`}
-   <div class="card" style="margin-top:12px"><b>🔁 반복 듣기 설정</b>
+   <details class="card" style="margin-top:14px" ${ST.optOpen?'open':''} ontoggle="ST.optOpen=this.open"><summary>⚙ 설정 (듣기 횟수, 빠르기, 뜻 보이기)</summary><div class="muted small" style="margin-top:6px">🎧 자동 단추를 누르면 카드가 저절로 넘어가며 읽어 줘요.</div>
+   <div style="margin-top:10px"><b>🔁 반복 듣기 설정</b>
    <div class="row" style="margin-top:8px"><select onchange="SET.rep=+this.value;saveSet();render()">${[1,2,3,5].map(n=>`<option value="${n}" ${(SET.rep||3)===n?'selected':''}>영어 ${n}번씩</option>`).join('')}</select>
    <select onchange="SET.rate=+this.value;saveSet()">${[[.6,'아주 천천히'],[.75,'천천히'],[.85,'보통'],[1,'빠르게']].map(([v,n])=>`<option value="${v}" ${(SET.rate||.85)===v?'selected':''}>${n}</option>`).join('')}</select></div>
    <label class="chk"><input type="checkbox" ${SET.readKo!==false?'checked':''} onchange="SET.readKo=this.checked;saveSet()"> 자동 듣기 때 우리말 뜻도 읽어 주기</label>
    <label class="chk"><input type="checkbox" ${SET.readEx!==false?'checked':''} onchange="SET.readEx=this.checked;saveSet()"> 자동 듣기 때 예문도 읽어 주기</label>
    <label class="chk"><input type="checkbox" ${SET.loop?'checked':''} onchange="SET.loop=this.checked;saveSet()"> 끝나면 처음부터 다시 (계속 반복)</label></div>
-   <div class="card" style="margin-top:12px"><label class="chk"><input type="checkbox" ${SET.showMean?'checked':''} onchange="SET.showMean=this.checked;saveSet();render()"> 뜻 처음부터 보이기</label>
+   <div style="margin-top:12px"><label class="chk"><input type="checkbox" ${SET.showMean?'checked':''} onchange="SET.showMean=this.checked;saveSet();render()"> 뜻 처음부터 보이기</label>
    <label class="chk"><input type="checkbox" ${SET.shuffle?'checked':''} onchange="SET.shuffle=this.checked;saveSet();toast('다음에 공부를 시작할 때부터 적용돼요')"> 순서 섞어서 공부하기</label>
    <label class="chk"><input type="checkbox" ${SET.autoSpeak?'checked':''} onchange="SET.autoSpeak=this.checked;saveSet()"> 카드 넘길 때 소리 자동 듣기</label>
-   <div class="muted small">💡 카드를 옆으로 밀어도 넘어가요.</div></div>`;}
+   <div class="muted small">💡 카드를 옆으로 밀어도 넘어가요.</div></div></details>`;}
   return h;
 };
-VIEWS.study.after=()=>{const wc=$('#wc');if(!wc||ST.single)return;let x0=null;
+function fitCard(){const wc=$('#wc');if(!wc)return;const ph=wc.querySelector('.photo');if(!ph)return;
+  ph.style.aspectRatio='';ph.style.height='';const sc=ph.querySelector('.sc');if(sc)sc.style.fontSize='';$('#app').classList.remove('tight');
+  const last=$('.navrow')||[...document.querySelectorAll('#app .tools')].pop();if(!last)return;
+  const nav=$('#nav');const limit=innerHeight-(nav?nav.getBoundingClientRect().height:0)-8;
+  let over=last.getBoundingClientRect().bottom+scrollY-limit;if(over<=0)return;
+  if(ph.getBoundingClientRect().height-over<130){$('#app').classList.add('tight');over=last.getBoundingClientRect().bottom+scrollY-limit;if(over<=0)return;}
+  const h=Math.max(64,ph.getBoundingClientRect().height-over);ph.style.aspectRatio='auto';ph.style.height=h+'px';
+  if(sc&&h<170)sc.style.fontSize=Math.max(30,Math.round(h*.42))+'px';}
+addEventListener('resize',()=>{if(ST.view==='study')fitCard();});
+VIEWS.study.after=()=>{fitCard();const wc=$('#wc');if(!wc||ST.single)return;let x0=null;
   wc.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
   wc.addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
     if(dx<-50)nextCard();else if(dx>50&&ST.i>0){ST.i--;ST.flip=false;render();}});
   if(SET.autoSpeak&&ST.lastSpoken!==ST.i){ST.lastSpoken=ST.i;speak(ST.words[ST.i]);}};
+function startScroll(){const S=setInfo(ST.id);let W=partWords(S.words,ST.part||'all');
+  if(ST.id!=='known')W=W.filter(w=>!KNOWN[w]);
+  if(!W.length)return toast('여기 단어는 다 외웠어요! 시험으로 확인해 보세요 💪');
+  go('scroll',{words:W,id:ST.id,part:ST.part,back:JSON.stringify({view:'set',id:ST.id,part:ST.part})});}
+VIEWS.scroll=()=>{const S=setInfo(ST.id);const W=ST.words;const hide=!SET.showMean;
+  let h=topBar(`📜 ${esc(S.name)}${partLabel(ST.part)}`,'goBack()');
+  h+=`<div class="slbar"><b id="slcnt">${W.length}개</b><label class="chk" style="margin:0"><input type="checkbox" ${hide?'checked':''} onchange="SET.showMean=!this.checked;saveSet();$('#sl').classList.toggle('hide',this.checked)"> 뜻 가리기</label><span class="muted small">누르면 뜻과 예문, ✅는 외웠어요</span></div>`;
+  h+=`<div class="sl ${hide?'hide':''}" id="sl">`+W.map(w=>{const e=entry(w);const k=ST.id==='known';
+    return `<div class="sc-card" data-w="${esc(w)}" onclick="this.classList.toggle('open')"><div class="th">${photoHTML(e,true)}</div><div class="bd">
+      <div><span class="w">${esc(e.w)}</span>${e.ipa?`<span class="ip">${esc(e.ipa)}</span>`:''}</div>
+      <div class="m"><span class="ps">${esc(posKo(e.pos))}</span>${esc(e.ko)||'(뜻 없음)'}</div>
+      ${e.ex?`<div class="x">📖 ${exHTML(e)} <button class="btn" style="min-height:26px;padding:0 6px;font-size:12px" onclick="event.stopPropagation();speakEx(${jsq(e.w)})">🔊 예문</button>${e.exk?`<div class="k">${esc(e.exk)}</div>`:''}</div>`:''}</div>
+      <div class="ac" onclick="event.stopPropagation()"><button class="btn" title="듣기" onclick="speak(${jsq(e.w)})">🔊</button>${k?`<button class="btn" title="다시 외우기" onclick="scrollUnknown(this,${jsq(e.w)})">↩</button>`:`<button class="btn ok" title="외웠어요" onclick="scrollKnown(this,${jsq(e.w)})">✅</button>`}</div></div>`;}).join('')+`</div>`;
+  h+=`<div class="row" style="margin-top:14px"><button class="btn ok" style="font-size:17px" onclick="go('testSetup',{id:ST.id,part:ST.part||'all'})">📝 다 봤으면 시험 보기</button></div>`;
+  return h;};
+function scrollKnown(btn,w){if(!ST.words.includes(w))return;KNOWN[w]=Date.now();saveKnown();if(WRONG[w]){delete WRONG[w];saveWrong();}
+  ST.words=ST.words.filter(x=>x!==w);toast(partDoneMsg('✅ 외웠어요! 외운 단어로 옮겼어요'));
+  const c=btn.closest('.sc-card');c.classList.add('gone');setTimeout(()=>c.remove(),250);
+  const n=$('#slcnt');if(n)n.textContent=ST.words.length+'개';
+  if(!ST.words.length)setTimeout(()=>{const b=JSON.parse(ST.back||'{"view":"home"}');if(b.part&&b.part!=='all'&&isDone(b.id,b.part))delete b.part;go(b.view||'home',b);},400);}
+function scrollUnknown(btn,w){if(!ST.words.includes(w))return;delete KNOWN[w];saveKnown();ST.words=ST.words.filter(x=>x!==w);toast('다시 공부할 단어로 돌려놨어요');
+  const c=btn.closest('.sc-card');c.classList.add('gone');setTimeout(()=>c.remove(),250);const n=$('#slcnt');if(n)n.textContent=ST.words.length+'개';
+  if(!ST.words.length)setTimeout(goBack,400);}
 function nextCard(){if(ST.i<ST.words.length-1){ST.i++;ST.flip=false;render();}else{toast('다 봤어요! 이제 시험으로 확인해 볼까요? 💪');goBack();}}
 function goBack(){if(ST.back){const b=JSON.parse(ST.back);go(b.view,b);}else go('home');}
 document.addEventListener('keydown',e=>{if(ST.view!=='study'||ST.single||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
@@ -798,6 +858,14 @@ VIEWS.help=()=>{const tab=ST.tab||'stu';
    <li><b>🔊 듣기</b>를 누르면 발음이 나와요. 따라 말해 봐요.</li>
    <li><b>📖 예문</b>은 그 단어가 들어간 짧은 문장이에요.</li>
    <li>다음 카드는 <b>다음 ▶</b>을 누르거나 카드를 옆으로 밀어요.</li>
+   </ul>
+
+   <h4>📜 쭉 내려 보며 외우기</h4>
+   <p>카드를 한 장씩 넘기지 않고, <b>고른 단어(예: 30개)를 한 화면에 줄줄이</b> 놓고 아래로 내리면서 외워요.</p>
+   <ul>
+   <li>뜻은 <b>흐리게 가려져</b> 있어요. 카드를 누르면 뜻이 보여요.</li>
+   <li><b>✅ 외웠어요</b>를 누르면 그 카드가 목록에서 사라져요.</li>
+   <li>위의 <b>뜻 가리기</b>를 끄면 뜻이 모두 보여요.</li>
    </ul>
 
    <h4>✅ 외웠으면 「외웠어요」</h4>
